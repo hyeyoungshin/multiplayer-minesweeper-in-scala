@@ -8,6 +8,7 @@ enum Difficulty:
 //   val difficulty: Difficulty
 // )
 
+// class Player(val name: String, var flags: Int = 10, var points: Int)
 
 // def start_game(players: List[Player], difficulty: Difficulty.easy): Game = 
 //   val (solution, game_boards) = create_game(players.length, difficulty)
