@@ -8,7 +8,7 @@
 case class Coordinate (val x: Int, val y: Int)
 
 
-case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile])
+case class Board[Tile] (val xsize: Int, val ysize:Int, val get_tile: Map[Coordinate, Tile])
 
 
 type SolutionBoard = Board[SolutionTile]
@@ -37,14 +37,14 @@ enum PlayerTile:
 // * You get
 // PlayerBoard with tile at pos revealed
 def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
-  val new_tile_map = playerboard.tile_map + (
-    pos -> PlayerTile.Revealed(solutionboard.tile_map(pos))
+  val new_tile_map = playerboard.get_tile + (
+    pos -> PlayerTile.Revealed (tile = solutionboard.get_tile(pos))
   )
   
   Board(
       xsize = playerboard.xsize,
       ysize = playerboard.ysize,
-      tile_map = new_tile_map
+      get_tile = new_tile_map
   )
 
 
@@ -61,7 +61,7 @@ def all_neighbors(pos: Coordinate): List[Coordinate] =
 def count_neighboring_mines(mineboard: MineBoard, pos: Coordinate): Int = 
   val neighbors = neighbors_inbounds(mineboard.xsize, mineboard.ysize, all_neighbors(pos))
 
-  neighbors.foldLeft(0)( (acc, pos) => if mineboard.tile_map(pos) then acc + 1 else acc )
+  neighbors.foldLeft(0)( (acc, pos) => if mineboard.get_tile(pos) then acc + 1 else acc )
 
 
 
@@ -74,7 +74,7 @@ def count_neighboring_mines(mineboard: MineBoard, pos: Coordinate): Int =
 // SolutionTile at Coordinate
 def get_solutiontile_at(mineboard: MineBoard, pos: Coordinate): SolutionTile = 
   val num_mines = count_neighboring_mines(mineboard, pos)
-  if mineboard.tile_map(pos) then
+  if mineboard.get_tile(pos) then
     SolutionTile.Mine
 
   else if num_mines == 0 then
@@ -83,14 +83,14 @@ def get_solutiontile_at(mineboard: MineBoard, pos: Coordinate): SolutionTile =
     SolutionTile.Hint(num_mines)
 
 
-// * Helper to generate Keys for Board.tile_map
+// * Helper to generate Keys for Board.get_tile
 // * For a board of size 3 * 3, it generates (0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 1)
 //
 // ** You give
 // xlen : Board's horizontal size
 // ylen : Board's vertical size
 // * You get
-// A sequence of Keys for Board.tile_map
+// A sequence of Keys for Board.get_tile
 def coordinate_range (xlen: Int, ylen: Int) : IndexedSeq[(Int, Int)] = 
   (0 until xlen).flatMap( x => (0 until ylen).map( y => (x, y) ) )
 
@@ -108,7 +108,7 @@ def create_solutionboard(mineboard: MineBoard): SolutionBoard =
   Board(
     xsize = mineboard.xsize,
     ysize = mineboard.ysize,
-    tile_map = range.map( (x, y) => ( Coordinate(x, y), get_solutiontile_at(mineboard, Coordinate(x, y)) ) ).toMap
+    get_tile = range.map( (x, y) => ( Coordinate(x, y), get_solutiontile_at(mineboard, Coordinate(x, y)) ) ).toMap
   )
 
 // * Creates MineBoard which represents the mine locations from GameInput at the start of game
@@ -127,7 +127,7 @@ def create_mineboard(mine_locations: Array[Array[Int]]): MineBoard =
   Board(
     xsize = xlen,
     ysize = ylen,
-    tile_map = range.map( (x, y) => ( Coordinate(x, y), mine_locations(x)(y) == 1 )).toMap
+    get_tile = range.map( (x, y) => ( Coordinate(x, y), mine_locations(x)(y) == 1 )).toMap
   )
 
 // * Creates the initial PlayerBoard at the start of a game
@@ -146,7 +146,7 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard =
   Board(
     xsize = xlen,
     ysize = ylen,
-    tile_map = range.map( (x, y) => ( Coordinate(x, y), PlayerTile.Hidden )).toMap
+    get_tile = range.map( (x, y) => ( Coordinate(x, y), PlayerTile.Hidden )).toMap
   )
 
 @main def hello(): Unit =
@@ -154,7 +154,7 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard =
   // val solutionboard = SolutionBoard(
   //   xsize = 3, 
   //   ysize = 3, 
-  //   tile_map = Map(Coordinate(1, 1) -> SolutionTile.Empty, Coordinate(1, 2) -> SolutionTile.Empty, Coordinate(1, 3) -> SolutionTile.Mine,
+  //   get_tile = Map(Coordinate(1, 1) -> SolutionTile.Empty, Coordinate(1, 2) -> SolutionTile.Empty, Coordinate(1, 3) -> SolutionTile.Mine,
   //   Coordinate(2, 1) -> SolutionTile.Empty, Coordinate(2, 2) -> SolutionTile.Empty, Coordinate(2, 3) -> SolutionTile.Hint(2),
   //   Coordinate(3, 1) -> SolutionTile.Empty, Coordinate(3, 2) -> SolutionTile.Empty, Coordinate(3, 3) -> SolutionTile.Mine
   //   )
@@ -163,14 +163,14 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard =
   // val playerboard = PlayerBoard(
   //   xsize = 3,
   //   ysize = 3,
-  //   tile_map = Map(Coordinate(1, 1) -> PlayerTile.Hidden, Coordinate(1, 2) -> PlayerTile.Hidden, Coordinate(1, 3) -> PlayerTile.Hidden,
+  //   get_tile = Map(Coordinate(1, 1) -> PlayerTile.Hidden, Coordinate(1, 2) -> PlayerTile.Hidden, Coordinate(1, 3) -> PlayerTile.Hidden,
   //   Coordinate(2, 1) -> PlayerTile.Hidden, Coordinate(2, 2) -> PlayerTile.Hidden, Coordinate(2, 3) -> PlayerTile.Hidden,
   //   Coordinate(3, 1) -> PlayerTile.Hidden, Coordinate(3, 2) -> PlayerTile.Hidden, Coordinate(3, 3) -> PlayerTile.Hidden
   //   )
   // )
 
   // val newboard = reveal(solutionboard, playerboard, Coordinate(2, 3))
-  // val newtile = newboard.tile_map(Coordinate(2, 3))
+  // val newtile = newboard.get_tile(Coordinate(2, 3))
 
   // newtile match {
   //   case PlayerTile.Revealed(tile) => tile match {

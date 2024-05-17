@@ -11,7 +11,7 @@ class Minesweeper extends AnyFunSuite {
   val playerboard = Board(
     xsize = 3,
     ysize = 3,
-    tile_map = Map(Coordinate(0, 0) -> PlayerTile.Hidden, Coordinate(0, 1) -> PlayerTile.Hidden, Coordinate(0, 2) -> PlayerTile.Hidden,
+    get_tile = Map(Coordinate(0, 0) -> PlayerTile.Hidden, Coordinate(0, 1) -> PlayerTile.Hidden, Coordinate(0, 2) -> PlayerTile.Hidden,
                    Coordinate(1, 0) -> PlayerTile.Hidden, Coordinate(1, 1) -> PlayerTile.Hidden, Coordinate(1, 2) -> PlayerTile.Hidden,
                    Coordinate(2, 0) -> PlayerTile.Hidden, Coordinate(2, 1) -> PlayerTile.Hidden, Coordinate(2, 2) -> PlayerTile.Hidden
     )
@@ -53,13 +53,13 @@ class Minesweeper extends AnyFunSuite {
   test("create_solutiboard") {
     val solutionboard = create_solutionboard(mineboard)
     
-    assert(solutionboard.tile_map(Coordinate(1, 2)) == SolutionTile.Hint(2))
+    assert(solutionboard.get_tile(Coordinate(1, 2)) == SolutionTile.Hint(2))
   }
 
   test("reveal") {
     val solutionboard = create_solutionboard(mineboard)
     val next_playerboard = reveal(solutionboard, playerboard, click)
 
-    assert(next_playerboard.tile_map(click) == PlayerTile.Revealed(SolutionTile.Hint(2)))
+    assert(next_playerboard.get_tile(click) == PlayerTile.Revealed(SolutionTile.Hint(2)))
   }
 }
