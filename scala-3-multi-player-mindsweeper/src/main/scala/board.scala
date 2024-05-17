@@ -28,9 +28,17 @@ enum PlayerTile:
   case Revealed (val tile: SolutionTile)
 
 
-def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, coordinate: Coordinate): PlayerBoard = 
+// * Reveals the corresponding SolutionTile at Coordinate on PlayerBoard 
+//
+// ** You give
+// solutionboard : board with all tiles revealed (solution tiles)
+// playerboard : player's version of board
+// pos : tile position on playerboard to reveal (player click)
+// * You get
+// PlayerBoard with tile at pos revealed
+def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
   val new_tile_map = playerboard.tile_map + (
-    coordinate -> PlayerTile.Revealed(solutionboard.tile_map(coordinate))
+    pos -> PlayerTile.Revealed(solutionboard.tile_map(pos))
   )
   
   Board(
