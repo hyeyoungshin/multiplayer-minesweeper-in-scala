@@ -37,29 +37,41 @@ enum PlayerTile:
 // * You get
 // PlayerBoard with tile at pos revealed
 def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
-  val new_tile_map = playerboard.get_tile + (
-    pos -> PlayerTile.Revealed (tile = solutionboard.get_tile(pos))
+  val new_tile = solutionboard.get_tile(pos)
+  val new_map = playerboard.get_tile + (
+    pos -> PlayerTile.Revealed (tile = 
+      if new_tile == SolutionTile.Empty then 
+        reveal_more(solutionboard, pos) 
+      else 
+        new_tile
+    )
   )
   
   Board(
       xsize = playerboard.xsize,
       ysize = playerboard.ysize,
-      get_tile = new_tile_map
+      get_tile = new_map
   )
 
 
-def neighbors_inbounds(xsize: Int, ysize: Int, all_neighbors: List[Coordinate]): List[Coordinate] = 
-    all_neighbors.filter(pos => pos.x >= 0 && pos.x < xsize && pos.y >= 0 && pos.y < ysize)
+def reveal_more(solutionboard: SolutionBoard, pos: Coordinate): SolutionTile = ???
 
 
-def all_neighbors(pos: Coordinate): List[Coordinate] = 
-    List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
+def neighbors_inbounds(xsize: Int, ysize: Int, pos: Coordinate): List[Coordinate] = 
+  val all_neighbors = List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
       (i, j) => Coordinate(pos.x + i, pos.y + j))
+  
+  all_neighbors.filter(pos => pos.x >= 0 && pos.x < xsize && pos.y >= 0 && pos.y < ysize)
+
+
+// def all_neighbors(pos: Coordinate): List[Coordinate] = 
+//     List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
+//       (i, j) => Coordinate(pos.x + i, pos.y + j))
 
 
 
 def count_neighboring_mines(mineboard: MineBoard, pos: Coordinate): Int = 
-  val neighbors = neighbors_inbounds(mineboard.xsize, mineboard.ysize, all_neighbors(pos))
+  val neighbors = neighbors_inbounds(mineboard.xsize, mineboard.ysize, pos)
 
   neighbors.foldLeft(0)( (acc, pos) => if mineboard.get_tile(pos) then acc + 1 else acc )
 
@@ -83,7 +95,7 @@ def get_solutiontile_at(mineboard: MineBoard, pos: Coordinate): SolutionTile =
     SolutionTile.Hint(num_mines)
 
 
-// * Helper to generate Keys for Board.get_tile
+// * Helper to generate Keys for populating Board.get_tile
 // * For a board of size 3 * 3, it generates (0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 1)
 //
 // ** You give
