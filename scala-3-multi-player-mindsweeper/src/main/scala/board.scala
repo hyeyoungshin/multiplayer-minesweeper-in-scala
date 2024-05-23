@@ -52,8 +52,23 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordina
   
   solution_tile match {
     case SolutionTile.Empty => reveal_more(solutionboard, updated_board, pos)
+    case SolutionTile.Mine => reveal_all_mines(solutionboard, updated_board)
     case _ => updated_board
   }
+
+// * Reveals all Mines on PlayerBoard 
+//
+// ** You give
+// solutionboard : board with all tiles revealed (solution tiles)
+// playerboard : player's version of board
+// pos : tile position on playerboard to reveal (player click)
+// * You get
+// PlayerBoard with all mines revealed
+def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard =
+  val filtered_map = solutionboard.tile_map.filter((pos, tile) => tile == SolutionTile.Mine)
+  
+  filtered_map.keys.map(pos => update_board(playerboard, pos, SolutionTile.Mine)).last
+
 
 
 // Get neighboring tiles of pos. Check what solutontiles corresponds to neighboring tiles
