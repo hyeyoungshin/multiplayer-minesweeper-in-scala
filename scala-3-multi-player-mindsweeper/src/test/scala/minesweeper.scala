@@ -78,4 +78,11 @@ class Minesweeper extends AnyFunSuite {
     assert(test.tile_map(Coordinate(0, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
     assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
   }
+
+  test("reveal_all_mines") {
+    val test = reveal(solutionboard_3x3, playerboard_3x3, Coordinate(0, 2))
+
+    assert(test.tile_map(Coordinate(0, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
+    assert(test.tile_map(Coordinate(2, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
+  }
 }
