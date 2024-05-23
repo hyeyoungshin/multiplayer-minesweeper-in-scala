@@ -7,17 +7,10 @@ class Minesweeper extends AnyFunSuite {
   val game_input = parse_game_input(filename)
   val mineboard = create_mineboard(game_input.board)  
   val click = Coordinate(game_input.reveal.head.row - 1, game_input.reveal.head.column - 1)
-
-  val playerboard = Board(
-    xsize = 3,
-    ysize = 3,
-    get_tile = Map(Coordinate(0, 0) -> PlayerTile.Hidden, Coordinate(0, 1) -> PlayerTile.Hidden, Coordinate(0, 2) -> PlayerTile.Hidden,
-                   Coordinate(1, 0) -> PlayerTile.Hidden, Coordinate(1, 1) -> PlayerTile.Hidden, Coordinate(1, 2) -> PlayerTile.Hidden,
-                   Coordinate(2, 0) -> PlayerTile.Hidden, Coordinate(2, 1) -> PlayerTile.Hidden, Coordinate(2, 2) -> PlayerTile.Hidden
-    )
-  )
-
   
+  val solutionboard_3x3 = create_solutionboard(mineboard)
+  val playerboard_3x3 = create_playerboard(3, 3)
+    
 
   test("count_neighboring_mines") {
     val res = count_neighboring_mines(mineboard, click)
@@ -53,13 +46,36 @@ class Minesweeper extends AnyFunSuite {
   test("create_solutiboard") {
     val solutionboard = create_solutionboard(mineboard)
     
-    assert(solutionboard.get_tile(Coordinate(1, 2)) == SolutionTile.Hint(2))
+    assert(solutionboard.tile_map(Coordinate(1, 2)) == SolutionTile.Hint(2))
   }
 
-  test("reveal") {
-    val solutionboard = create_solutionboard(mineboard)
-    val next_playerboard = reveal(solutionboard, playerboard, click)
+  test("reveal_more") {
+    // [E, 1]
+    // [E, 1]
+    val solutionboard_2x2 = Board(2, 2, Map((Coordinate(0, 0) -> SolutionTile.Empty), (Coordinate(0, 1) -> SolutionTile.Hint(1)), 
+                                  (Coordinate(1, 0) -> SolutionTile.Empty), (Coordinate(1, 1) -> SolutionTile.Hint(1))))
+    val playerboard_2x2 = create_playerboard(2, 2)
+    // [R(E), H]
+    // [H, H]
+    val updated_playerboard_2x2 = 
+      Board(2, 2, playerboard_2x2.tile_map + (Coordinate(0,0) -> PlayerTile.Revealed(SolutionTile.Empty)))
+    
+    val test = reveal_more(solutionboard_2x2, updated_playerboard_2x2, Coordinate(0, 0))
 
-    assert(next_playerboard.get_tile(click) == PlayerTile.Revealed(SolutionTile.Hint(2)))
+    assert(test.tile_map(Coordinate(1, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
+    assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
+  }
+
+  test("reveal-one-tile") {
+    val test = reveal(solutionboard_3x3, playerboard_3x3, click)
+
+    assert(test.tile_map(Coordinate(1, 2)) == PlayerTile.Revealed(SolutionTile.Hint(2)))
+  }
+
+  test("reveal-more-tiles-if-empty") {
+    val test = reveal(solutionboard_3x3, playerboard_3x3, Coordinate(1, 0))
+
+    assert(test.tile_map(Coordinate(0, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
+    assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
   }
 }
