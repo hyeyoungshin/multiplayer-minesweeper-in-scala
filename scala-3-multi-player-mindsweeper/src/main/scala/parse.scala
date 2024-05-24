@@ -14,12 +14,3 @@ def parse_game_input(filename: String): GameInput =
   val json_str = new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
   
   read[GameInput](json_str)
-
-  
-
-
-  
-  
-
-
-
