@@ -6,14 +6,14 @@ class Minesweeper extends AnyFunSuite {
   val filename = "src/test/board_tests/1-in.json"
   val game_input = parse_game_input(filename)
   val mineboard = create_mineboard(game_input.board)  
-  val click = Coordinate(game_input.reveal.head.row - 1, game_input.reveal.head.column - 1)
+  val test_pos = Coordinate(1, 2)
   
   val solutionboard_3x3 = create_solutionboard(mineboard)
   val playerboard_3x3 = create_playerboard(3, 3)
     
 
   test("count_neighboring_mines") {
-    val res = count_neighboring_mines(mineboard, click)
+    val res = count_neighboring_mines(mineboard, test_pos)
     assert(res == 2)
   }
 
@@ -26,7 +26,7 @@ class Minesweeper extends AnyFunSuite {
   }
 
   test("get_solutiontile_at-hint") {
-    val test_tile = get_solutiontile_at(mineboard, click)
+    val test_tile = get_solutiontile_at(mineboard, test_pos)
     
     assert(test_tile == SolutionTile.Hint(2))
   }
@@ -67,7 +67,7 @@ class Minesweeper extends AnyFunSuite {
   }
 
   test("reveal-one-tile") {
-    val test = reveal(solutionboard_3x3, playerboard_3x3, click)
+    val test = reveal(solutionboard_3x3, playerboard_3x3, test_pos)
 
     assert(test.tile_map(Coordinate(1, 2)) == PlayerTile.Revealed(SolutionTile.Hint(2)))
   }
@@ -84,5 +84,10 @@ class Minesweeper extends AnyFunSuite {
 
     assert(test.tile_map(Coordinate(0, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
     assert(test.tile_map(Coordinate(2, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
+  }
+
+  test("convert_input_coordinates") {
+    val input_coordinates = game_input.reveal
+    assert(convert_input_coordinates(input_coordinates).head == test_pos)
   }
 }
