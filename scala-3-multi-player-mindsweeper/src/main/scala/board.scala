@@ -8,7 +8,11 @@
 case class Coordinate (val x: Int, val y: Int)
 
 
-case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile])
+case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
+  def print_board: Unit = 
+    val string_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
+    this.tile_map.map((pos, tile) => string_board(pos._1)(pos._2) = tile.toString())
+    print[String](string_board)
 
 
 type SolutionBoard = Board[SolutionTile]
@@ -16,16 +20,30 @@ type PlayerBoard = Board[PlayerTile]
 type MineBoard = Board[Boolean]
 
 
+trait Tile:
+  def toString: String
+
 // add purpose statement
-enum SolutionTile:
+enum SolutionTile extends Tile:
   case Empty
   case Mine
   case Hint (val hint: Int)
 
+  override def toString() = this match {
+    case Empty => "Empty"
+    case Mine => "Mine"
+    case Hint(n) => n.toString()
+  }
 
-enum PlayerTile:
+
+enum PlayerTile extends Tile:
   case Hidden 
   case Revealed (val tile: SolutionTile)
+
+  override def toString() = this match {
+    case Hidden => "Hidden"
+    case Revealed(t) => t.toString()
+  }
 
 
 def update_board(playerboard: PlayerBoard, pos: Coordinate, solutiontile: SolutionTile): PlayerBoard = 
@@ -184,27 +202,22 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard =
   )
 
 
-@main def hello(): Unit =
-  // val game_input = parse_game_input("src/test/board_tests/1-in.json")
-  // println(game_input.board.length)
+
+
+@main def hello(): Unit = 
+  // println(Array(1,2,3). mkString(""))
+
+  val filename = "src/test/board_tests/1-in.json"
+  val game_input = parse_game_input(filename)
+  val mineboard = create_mineboard(game_input.board)  
+  val solutionboard = create_solutionboard(mineboard)
   
-  // val p1 = Board(xsize = 2, ysize = 2, tile_map = Map(
-  //   (Coordinate(0, 0) -> PlayerTile.Hidden), (Coordinate(0, 1) -> PlayerTile.Hidden),
-  //   (Coordinate(1, 0) -> PlayerTile.Hidden), (Coordinate(1, 1) -> PlayerTile.Hidden))
-  // )
+  solutionboard.print_board
+  println("\n")
+  print(game_input.board)
+  println("\n")
 
-  // val p2 = Board(xsize = 2, ysize = 2, tile_map = Map(
-  //   (Coordinate(0, 0) -> PlayerTile.Revealed(tile = SolutionTile.Empty)), (Coordinate(0, 1) -> PlayerTile.Hidden),
-  //   (Coordinate(1, 0) -> PlayerTile.Hidden), (Coordinate(1, 1) -> PlayerTile.Revealed(SolutionTile.Hint(2))))
-  // )
-
-  // println(join_playerboards(p1, p2).tile_map)
+  val current_board = reveal(solutionboard, create_playerboard(solutionboard.xsize, solutionboard.ysize), Coordinate(0,0))
+  current_board.print_board
   
-  val solutionboard = Board(2, 2, Map((Coordinate(0, 0) -> SolutionTile.Empty), (Coordinate(0, 1) -> SolutionTile.Hint(1)), 
-                                  (Coordinate(1, 0) -> SolutionTile.Empty), (Coordinate(1, 1) -> SolutionTile.Hint(1))))
-  val playerboard = Board(2, 2, Map((Coordinate(0, 0) -> PlayerTile.Revealed(SolutionTile.Empty)), (Coordinate(0, 1) -> PlayerTile.Hidden), 
-                                    (Coordinate(1, 0) -> PlayerTile.Hidden), (Coordinate(1, 1) -> PlayerTile.Hidden)))
-  val res = reveal_more(solutionboard, playerboard, Coordinate(0, 0))
-  println(res.tile_map)
-
 def msg = "I was compiled by Scala 3. :)"
