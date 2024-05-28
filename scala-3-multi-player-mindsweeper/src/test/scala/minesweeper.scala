@@ -49,7 +49,7 @@ class Minesweeper extends AnyFunSuite {
     assert(solutionboard.tile_map(Coordinate(1, 2)) == SolutionTile.Hint(2))
   }
 
-  test("reveal_more") {
+  test("reveal_neighbors") {
     // [E, 1]
     // [E, 1]
     val solutionboard_2x2 = Board(2, 2, Map((Coordinate(0, 0) -> SolutionTile.Empty), (Coordinate(0, 1) -> SolutionTile.Hint(1)), 
@@ -60,7 +60,7 @@ class Minesweeper extends AnyFunSuite {
     val updated_playerboard_2x2 = 
       Board(2, 2, playerboard_2x2.tile_map + (Coordinate(0,0) -> PlayerTile.Revealed(SolutionTile.Empty)))
     
-    val test = reveal_more(solutionboard_2x2, updated_playerboard_2x2, Coordinate(0, 0))
+    val test = reveal_neighbors(solutionboard_2x2, updated_playerboard_2x2, Coordinate(0, 0))
 
     assert(test.tile_map(Coordinate(1, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
     assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
@@ -79,7 +79,7 @@ class Minesweeper extends AnyFunSuite {
     assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
   }
 
-  test("reveal_all_mines") {
+  test("reveal-all-mines-if-hit-mine") {
     val test = reveal(solutionboard_3x3, playerboard_3x3, Coordinate(0, 2))
 
     assert(test.tile_map(Coordinate(0, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
