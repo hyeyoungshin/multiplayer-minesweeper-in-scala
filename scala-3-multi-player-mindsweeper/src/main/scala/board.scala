@@ -10,9 +10,9 @@ case class Coordinate (val x: Int, val y: Int)
 
 case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
   def print_board: Unit = 
-    val string_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
-    this.tile_map.map((pos, tile) => string_board(pos._1)(pos._2) = tile.toString())
-    print[String](string_board)
+    val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
+    this.tile_map.map((pos, tile) => str_board(pos._1)(pos._2) = tile.toString())
+    print[String](str_board)
 
 
 type SolutionBoard = Board[SolutionTile]
