@@ -15,7 +15,6 @@ def convert_input_coordinates (input_coordinates: List[InputCoordinate]): List[C
 // ** You get
 // print out of the board  
 def print[T](board: Array[Array[T]]): Unit = 
-    println(board.map(_.mkString(", ")).mkString("\n"))
-
-
+    println(board.map(_.mkString("")).mkString("\n"))
+    println("\n")
 
