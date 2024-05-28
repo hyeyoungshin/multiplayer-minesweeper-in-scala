@@ -30,9 +30,9 @@ enum SolutionTile extends Tile:
   case Hint (val hint: Int)
 
   override def toString() = this match {
-    case Empty => "Empty"
-    case Mine => "Mine"
-    case Hint(n) => n.toString()
+    case Empty => "[E]"
+    case Mine => "[x]"
+    case Hint(n) => s"[$n]"
   }
 
 
@@ -41,7 +41,7 @@ enum PlayerTile extends Tile:
   case Revealed (val tile: SolutionTile)
 
   override def toString() = this match {
-    case Hidden => "Hidden"
+    case Hidden => "[ ]"
     case Revealed(t) => t.toString()
   }
 
@@ -69,7 +69,7 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordina
   val updated_board = update_board(playerboard, pos, solution_tile)
   
   solution_tile match {
-    case SolutionTile.Empty => reveal_more(solutionboard, updated_board, pos)
+    case SolutionTile.Empty => reveal_neighbors(solutionboard, updated_board, pos)
     case SolutionTile.Mine => reveal_all_mines(solutionboard, updated_board)
     case _ => updated_board
   }
@@ -85,13 +85,12 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordina
 def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard =
   val filtered_map = solutionboard.tile_map.filter((pos, tile) => tile == SolutionTile.Mine)
   
-  filtered_map.keys.map(pos => update_board(playerboard, pos, SolutionTile.Mine)).last
-
-
+  filtered_map.keys.foldLeft(playerboard)((acc, pos) => update_board(acc, pos, SolutionTile.Mine))
+  
 
 // Get neighboring tiles of pos. Check what solutontiles corresponds to neighboring tiles
-// If SolutionTile.Empty reveal_more with updated playerboard at pos
-def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
+// If SolutionTile.Empty reveal_neighbors with updated playerboard at pos
+def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
   val neighbors = neighbors_inbounds(solutionboard.xsize, solutionboard.ysize, pos)
 
   neighbors.foldLeft(playerboard)(
@@ -102,6 +101,10 @@ def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coo
         reveal(solutionboard, acc, pos)
     }
   )
+
+
+def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, loc: List[Coordinate]): PlayerBoard =
+    loc.foldLeft(playerboard)((acc, pos) => reveal(solutionboard, acc, pos))
 
 
 def neighbors_inbounds(xsize: Int, ysize: Int, pos: Coordinate): List[Coordinate] = 
@@ -202,22 +205,29 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard =
   )
 
 
+def simulate(filename: String): Unit = 
+  val game_input = parse_game_input(filename)
+  val mine_board = create_mineboard(game_input.board)  
+  val solution_board = create_solutionboard(mine_board)
+  println("solution_board:")
+  solution_board.print_board
+
+  val initial_board = create_playerboard(solution_board.xsize, solution_board.ysize)
+  println("initial_board:")
+  initial_board.print_board
+
+  val loc = convert_input_coordinates(game_input.reveal)
+  val current_board = reveal_more(solution_board, initial_board, loc) 
+  println("current_board:")
+  current_board.print_board
+  
+
+
+
+
 
 
 @main def hello(): Unit = 
-  // println(Array(1,2,3). mkString(""))
-
-  val filename = "src/test/board_tests/1-in.json"
-  val game_input = parse_game_input(filename)
-  val mineboard = create_mineboard(game_input.board)  
-  val solutionboard = create_solutionboard(mineboard)
-  
-  solutionboard.print_board
-  println("\n")
-  print(game_input.board)
-  println("\n")
-
-  val current_board = reveal(solutionboard, create_playerboard(solutionboard.xsize, solutionboard.ysize), Coordinate(0,0))
-  current_board.print_board
+  simulate("src/test/board_tests/4-in.json")
   
 def msg = "I was compiled by Scala 3. :)"
