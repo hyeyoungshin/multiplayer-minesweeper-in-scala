@@ -11,7 +11,7 @@ case class Coordinate (val x: Int, val y: Int)
 case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
   def print_board: Unit = 
     val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
-    this.tile_map.map((pos, tile) => str_board(pos._1)(pos._2) = tile.toString())
+    this.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
     print[String](str_board)
 
 
@@ -45,12 +45,16 @@ enum PlayerTile extends Tile:
     case Revealed(t) => t.toString()
   }
 
+// Object Flag extends Tile:
+  
+//   override def toString() = "[F]"
 
-def update_board(playerboard: PlayerBoard, pos: Coordinate, solutiontile: SolutionTile): PlayerBoard = 
+
+def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, solutiontile: SolutionTile): PlayerBoard = 
   Board(
     xsize = playerboard.xsize,
     ysize = playerboard.ysize,
-    tile_map = playerboard.tile_map + (pos -> PlayerTile.Revealed(solutiontile))
+    tile_map = playerboard.tile_map + (tile_pos -> PlayerTile.Revealed(solutiontile))
   )  
 
 
@@ -59,17 +63,17 @@ def update_board(playerboard: PlayerBoard, pos: Coordinate, solutiontile: Soluti
 // ** You give
 // solutionboard : board with all tiles revealed (solution tiles)
 // playerboard : player's version of board
-// pos : tile position on playerboard to reveal (player click)
+// tile_pos : tile position on playerboard to reveal (player click)
 // * You get
-// PlayerBoard with tile at pos revealed
-def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
-  // assuming playertile at pos is Hidden
+// PlayerBoard with tile at tile_pos revealed
+def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = 
+  // assuming playertile at tile_pos is Hidden
   // assuming solution_tile can be Mine which we deal later
-  val solution_tile = solutionboard.tile_map(pos)
-  val updated_board = update_board(playerboard, pos, solution_tile)
+  val solution_tile = solutionboard.tile_map(tile_pos)
+  val updated_board = update_board(playerboard, tile_pos, solution_tile)
   
   solution_tile match {
-    case SolutionTile.Empty => reveal_neighbors(solutionboard, updated_board, pos)
+    case SolutionTile.Empty => reveal_neighbors(solutionboard, updated_board, tile_pos)
     case SolutionTile.Mine => reveal_all_mines(solutionboard, updated_board)
     case _ => updated_board
   }
@@ -79,57 +83,61 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordina
 // ** You give
 // solutionboard : board with all tiles revealed (solution tiles)
 // playerboard : player's version of board
-// pos : tile position on playerboard to reveal (player click)
+// tile_pos : tile position on playerboard to reveal (player click)
 // * You get
 // PlayerBoard with all mines revealed
 def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard =
-  val filtered_map = solutionboard.tile_map.filter((pos, tile) => tile == SolutionTile.Mine)
+  val filtered_map = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
   
-  filtered_map.keys.foldLeft(playerboard)((acc, pos) => update_board(acc, pos, SolutionTile.Mine))
+  filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => update_board(acc, tile_pos, SolutionTile.Mine))
   
 
-// Get neighboring tiles of pos. Check what solutontiles corresponds to neighboring tiles
-// If SolutionTile.Empty reveal_neighbors with updated playerboard at pos
-def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, pos: Coordinate): PlayerBoard = 
-  val neighbors = neighbors_inbounds(solutionboard.xsize, solutionboard.ysize, pos)
+// Get neighboring tiles of tile_pos. Check what solutontiles corresponds to neighboring tiles
+// If SolutionTile.Empty reveal_neighbors with updated playerboard at tile_pos
+def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = 
+  val neighbors = neighbors_inbounds(solutionboard.xsize, solutionboard.ysize, tile_pos)
 
   neighbors.foldLeft(playerboard)(
-    (acc, pos) =>  {
-      if playerboard.tile_map(pos) != PlayerTile.Hidden then
+    (acc, tile_pos) =>  {
+      if playerboard.tile_map(tile_pos) != PlayerTile.Hidden then
         acc
       else 
-        reveal(solutionboard, acc, pos)
+        reveal(solutionboard, acc, tile_pos)
     }
   )
 
 
 def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, loc: List[Coordinate]): PlayerBoard =
-    loc.foldLeft(playerboard)((acc, pos) => reveal(solutionboard, acc, pos))
+    loc.foldLeft(playerboard)((acc, tile_pos) => reveal(solutionboard, acc, tile_pos))
 
 
-def neighbors_inbounds(xsize: Int, ysize: Int, pos: Coordinate): List[Coordinate] = 
+// def flag(solutionboard, playerboard, tile_pos: Coordinate): PlayerBoard = 
+//   update_board(playerboard, tile_pos, Flag)
+
+
+def neighbors_inbounds(xsize: Int, ysize: Int, tile_pos: Coordinate): List[Coordinate] = 
   val all_neighbors = List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
-      (i, j) => Coordinate(pos.x + i, pos.y + j))
+      (i, j) => Coordinate(tile_pos.x + i, tile_pos.y + j))
   
-  all_neighbors.filter(pos => pos.x >= 0 && pos.x < xsize && pos.y >= 0 && pos.y < ysize)
+  all_neighbors.filter(tile_pos => tile_pos.x >= 0 && tile_pos.x < xsize && tile_pos.y >= 0 && tile_pos.y < ysize)
 
 
-def count_neighboring_mines(mineboard: MineBoard, pos: Coordinate): Int = 
-  val neighbors = neighbors_inbounds(mineboard.xsize, mineboard.ysize, pos)
+def count_neighboring_mines(mineboard: MineBoard, tile_pos: Coordinate): Int = 
+  val neighbors = neighbors_inbounds(mineboard.xsize, mineboard.ysize, tile_pos)
 
-  neighbors.foldLeft(0)( (acc, pos) => if mineboard.tile_map(pos) then acc + 1 else acc )
+  neighbors.foldLeft(0)( (acc, tile_pos) => if mineboard.tile_map(tile_pos) then acc + 1 else acc )
 
 
-// * Make SolutionTile at pos based on the number of neighboring 
+// * Make SolutionTile at tile_pos based on the number of neighboring 
 //
 // ** You give
 // mineboard : mine locations 
-// pos : Coordinate on Board
+// tile_pos : Coordinate on Board
 // * You get
 // SolutionTile at Coordinate
-def get_solutiontile_at(mineboard: MineBoard, pos: Coordinate): SolutionTile = 
-  val num_mines = count_neighboring_mines(mineboard, pos)
-  if mineboard.tile_map(pos) then
+def get_solutiontile_at(mineboard: MineBoard, tile_pos: Coordinate): SolutionTile = 
+  val num_mines = count_neighboring_mines(mineboard, tile_pos)
+  if mineboard.tile_map(tile_pos) then
     SolutionTile.Mine
 
   else if num_mines == 0 then
@@ -221,13 +229,6 @@ def simulate(filename: String): Unit =
   println("current_board:")
   current_board.print_board
   
-
-
-
-
-
-
-@main def hello(): Unit = 
-  simulate("src/test/board_tests/4-in.json")
+// @main def hello(): Unit = 
+  // simulate("src/test/board_tests/4-in.json")
   
-def msg = "I was compiled by Scala 3. :)"
