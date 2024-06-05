@@ -4,6 +4,8 @@
 in*
 out*
 
+project
+
 # macOS
 .DS_Store
 

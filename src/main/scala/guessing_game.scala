@@ -1,3 +1,5 @@
+package guessing_game
+
 import scala.util.Random
 import scala.io.StdIn.readLine
 

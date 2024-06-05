@@ -17,7 +17,7 @@ enum Status:
     }
 
 
-case class MS_GameState(val solution_board: SolutionBoard, val player_board: PlayerBoard, val status: Status):
+case class GameState(val solution_board: SolutionBoard, val player_board: PlayerBoard, val status: Status):
   def print_state: Unit = 
     player_board.print_board
     status.print_status
@@ -27,11 +27,11 @@ def within_boundary(user_input: InputCoordinate): Boolean =
   user_input.row > 0 && user_input.column > 0 && user_input.row <= BOARD_SIZE._1 && user_input.column <= BOARD_SIZE._2
 
 
-def fresh(state: MS_GameState, user_input: InputCoordinate): Boolean = 
+def fresh(state: GameState, user_input: InputCoordinate): Boolean = 
   state.player_board.tile_map(convert_input_coordinate(user_input)) == PlayerTile.Hidden
 
 
-def valid_user_input(state: MS_GameState, user_input: InputCoordinate): Boolean = 
+def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean = 
   within_boundary(user_input) && fresh(state, user_input)
 
 
@@ -52,16 +52,16 @@ def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array
   board
   
 
-def new_game(): MS_GameState = 
+def new_game(): GameState = 
   val mine_locations = generate_mine_locations(NUM_MINES, BOARD_SIZE)
   val mine_board = create_mineboard(mine_locations)
   val solution_board = create_solutionboard(mine_board)
   val initial_board = create_playerboard(BOARD_SIZE._1, BOARD_SIZE._2)
   
-  MS_GameState(solution_board, initial_board, Status.Continue)
+  GameState(solution_board, initial_board, Status.Continue)
 
 
-def game_over(state: MS_GameState): Boolean = 
+def game_over(state: GameState): Boolean = 
   state.status match {
     case Status.Lose => true
     case Status.Win => true
@@ -74,7 +74,7 @@ def win(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean =
   hidden_pos.foldLeft(true)((acc, pos) => acc && solution_board.tile_map(pos) == SolutionTile.Mine)
 
 
-def update_state(state: MS_GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): MS_GameState = 
+def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
   val new_status = 
     if win(state.solution_board, new_player_board) then
       Status.Win
@@ -86,7 +86,7 @@ def update_state(state: MS_GameState, new_player_board: PlayerBoard, tile_pos: C
         case _ => throw IllegalStateException("tile cannot be hidden.")
       }
     
-  MS_GameState(state.solution_board, new_player_board, new_status)
+  GameState(state.solution_board, new_player_board, new_status)
 
   
 def print_start(): Unit = 
@@ -100,7 +100,7 @@ def print_start(): Unit =
   println(s"Number of mines: $NUM_MINES \n")
 
 
-def play(state: MS_GameState, tile_pos: Coordinate): MS_GameState = 
+def play(state: GameState, tile_pos: Coordinate): GameState = 
   state.status match {
       case Status.Continue => 
         val cur_playerboard = reveal(state.solution_board, state.player_board, tile_pos) 
@@ -113,7 +113,7 @@ def play(state: MS_GameState, tile_pos: Coordinate): MS_GameState =
 // promt user with input request until it is valid to use
 // valid input is within range of the board, input is fresh, length should be 2 
 //
-def get_valid_input(state: MS_GameState): InputCoordinate = 
+def get_valid_input(state: GameState): InputCoordinate = 
   println("Enter a valid tile position separated by a comma: ")
   val user_input = readLine()
   
@@ -124,7 +124,7 @@ def get_valid_input(state: MS_GameState): InputCoordinate =
   }
 
 
-def parse_and_validate(state: MS_GameState, user_input: String): Option[InputCoordinate] = 
+def parse_and_validate(state: GameState, user_input: String): Option[InputCoordinate] = 
   val parsed_input = parse_user_input(user_input)
   parsed_input match {
     case Some(parsed) => valid_user_input(state, parsed) match {
