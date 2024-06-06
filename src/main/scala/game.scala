@@ -67,17 +67,6 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
     
   GameState(state.solution_board, new_player_board, new_status)
 
-  
-def print_start(): Unit = 
-  println("\n")
-  println("Welcome to the minesweeper game. \n")
-  println("Enter your name: ")
-  val user_name = readLine()
-  println("\n")
-  println(s"Hello, $user_name! Starting a game with \n")
-  println(s"Board size: $BOARD_SIZE \n")
-  println(s"Number of mines: $NUM_MINES \n")
-
 
 def play(state: GameState, tile_pos: Coordinate): GameState = 
   state.status match {
@@ -133,9 +122,6 @@ def parse_and_validate(state: GameState, user_input: String): Option[InputCoordi
     state.print_state
 
 
-// Separate Game and Board. 
-// Things that do not require GameState can move to Board.
-// -- DONE
 // TODO:
-// Separate Game and text ui.
+// Separate Game(model) and text ui(view).
 // Game - Coordinate || text ui - InputCoordinate
