@@ -23,16 +23,13 @@ case class GameState(val solution_board: SolutionBoard, val player_board: Player
     status.print_status
     
 
-def within_boundary(user_input: InputCoordinate): Boolean = 
-  user_input.row > 0 && user_input.column > 0 && user_input.row <= BOARD_SIZE._1 && user_input.column <= BOARD_SIZE._2
-
-
+// method of Board
 def fresh(state: GameState, user_input: InputCoordinate): Boolean = 
   state.player_board.tile_map(convert_input_coordinate(user_input)) == PlayerTile.Hidden
 
 
 def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean = 
-  within_boundary(user_input) && fresh(state, user_input)
+  state.player_board.within_boundary(convert_input_coordinate(user_input)) && fresh(state, user_input)
 
 
 def parse_user_input(user_input: String): Option[InputCoordinate] = 
@@ -150,3 +147,9 @@ def parse_and_validate(state: GameState, user_input: String): Option[InputCoordi
     state = play(state, tile_pos)
     state.print_state
 
+
+// TODO:
+// Separate Game and Board. 
+// Things that do not require GameState can move to Board.
+// Separate Game and text ui.
+// Game - Coordinate || text ui - InputCoordinate

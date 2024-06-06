@@ -2,7 +2,7 @@
 //
 // ** You give
 // x : starting from top left corner (0, 0) grow to the right 
-// y : starting from top left corner (0, 0) grow downards
+// y : starting from top left corner (0, 0) grow downwards
 // ** You get
 // A tile position on the board
 case class Coordinate (val x: Int, val y: Int)
@@ -13,6 +13,10 @@ case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordin
     val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
     this.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
     print[String](str_board)
+
+  def within_boundary(tile_pos: Coordinate): Boolean = 
+    tile_pos.x > -1 && tile_pos.y > -1 && tile_pos.x < xsize && tile_pos.y < ysize
+
 
 
 type SolutionBoard = Board[SolutionTile]
@@ -119,6 +123,7 @@ def neighbors_inbounds(xsize: Int, ysize: Int, tile_pos: Coordinate): List[Coord
   val all_neighbors = List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
       (i, j) => Coordinate(tile_pos.x + i, tile_pos.y + j))
   
+  // TODO: use within_boundary
   all_neighbors.filter(tile_pos => tile_pos.x >= 0 && tile_pos.x < xsize && tile_pos.y >= 0 && tile_pos.y < ysize)
 
 
