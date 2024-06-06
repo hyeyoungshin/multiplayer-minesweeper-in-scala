@@ -21,15 +21,11 @@ case class GameState(val solution_board: SolutionBoard, val player_board: Player
   def print_state: Unit = 
     player_board.print_board
     status.print_status
-    
-
-// method of Board
-def fresh(state: GameState, user_input: InputCoordinate): Boolean = 
-  state.player_board.tile_map(convert_input_coordinate(user_input)) == PlayerTile.Hidden
 
 
 def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean = 
-  state.player_board.within_boundary(convert_input_coordinate(user_input)) && fresh(state, user_input)
+  val tile_pos = convert_input_coordinate(user_input)
+  state.player_board.within_boundary(tile_pos) && state.player_board.is_hidden(tile_pos)
 
 
 def parse_user_input(user_input: String): Option[InputCoordinate] = 

@@ -18,6 +18,10 @@ case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordin
     tile_pos.x > -1 && tile_pos.y > -1 && tile_pos.x < xsize && tile_pos.y < ysize
 
 
+  def is_hidden(tile_pos: Coordinate): Boolean = 
+    this.tile_map(tile_pos) == PlayerTile.Hidden
+
+
 
 type SolutionBoard = Board[SolutionTile]
 type PlayerBoard = Board[PlayerTile]
