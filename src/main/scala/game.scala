@@ -1,5 +1,5 @@
 import scala.io.StdIn.readLine
-import scala.util.Random
+
 
 val BOARD_SIZE = (5, 5)
 val NUM_MINES = 5
@@ -34,15 +34,6 @@ def parse_user_input(user_input: String): Option[InputCoordinate] =
     case 2 => Some(InputCoordinate(int_arr(0), int_arr(1)))
     case _ => None
   }
-
-
-def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
-  var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
-  val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
-  
-  val mine_locations = random_coordinates.take(num_mines)
-  mine_locations.foreach((x, y) => board(x)(y) = 1)
-  board
   
 
 def new_game(): GameState = 
@@ -60,11 +51,6 @@ def game_over(state: GameState): Boolean =
     case Status.Win => true
     case Status.Continue => false
   }
-
-
-def win(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
-  val hidden_pos = player_board.tile_map.filter((pos, tile) => tile == PlayerTile.Hidden).keys
-  hidden_pos.foldLeft(true)((acc, pos) => acc && solution_board.tile_map(pos) == SolutionTile.Mine)
 
 
 def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
@@ -103,9 +89,12 @@ def play(state: GameState, tile_pos: Coordinate): GameState =
     }
 
 
-// promt user with input request until it is valid to use
-// valid input is within range of the board, input is fresh, length should be 2 
-//
+// * Promt user with input request until it is valid to use
+// * valid input is within range of the board, fresh, length = 2 
+// ** You give
+// state: GameState
+// ** You get
+// a valid user input for a tile position to reveal
 def get_valid_input(state: GameState): InputCoordinate = 
   println("Enter a valid tile position separated by a comma: ")
   val user_input = readLine()
@@ -144,8 +133,9 @@ def parse_and_validate(state: GameState, user_input: String): Option[InputCoordi
     state.print_state
 
 
-// TODO:
 // Separate Game and Board. 
 // Things that do not require GameState can move to Board.
+// -- DONE
+// TODO:
 // Separate Game and text ui.
 // Game - Coordinate || text ui - InputCoordinate

@@ -1,3 +1,5 @@
+import scala.util.Random
+
 // * Represents tile positions on the boards
 //
 // ** You give
@@ -53,9 +55,19 @@ enum PlayerTile extends Tile:
     case Revealed(t) => t.toString()
   }
 
-// Object Flag extends Tile:
+
+def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
+  var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
+  val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
   
-//   override def toString() = "[F]"
+  val mine_locations = random_coordinates.take(num_mines)
+  mine_locations.foreach((x, y) => board(x)(y) = 1)
+  board
+
+
+def win(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
+  val hidden_pos = player_board.tile_map.filter((pos, tile) => tile == PlayerTile.Hidden).keys
+  hidden_pos.foldLeft(true)((acc, pos) => acc && solution_board.tile_map(pos) == SolutionTile.Mine)
 
 
 def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, solutiontile: SolutionTile): PlayerBoard = 
