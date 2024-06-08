@@ -67,10 +67,18 @@ def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array
   board
 
 
-def win(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
-  val hidden_pos = player_board.tile_map.filter((pos, tile) => tile == PlayerTile.Hidden).keys
-  hidden_pos.foldLeft(true)((acc, pos) => acc && solution_board.tile_map(pos) == SolutionTile.Mine)
+def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
+  val num_mines = solution_board.tile_map.count((_, tile) => tile == SolutionTile.Mine)
+  val num_hidden = player_board.tile_map.count((_, tile) => tile == PlayerTile.Hidden)
+  val num_flagged = player_board.tile_map.count((_, tile) => tile == PlayerTile.Flagged)
 
+  num_hidden == num_mines || num_flagged == num_mines
+
+
+// def flagged_equals_mines(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
+  // val mines_pos = solution_board.tile_map.filter((pos, tile) => tile == SolutionTile.Mine).keys
+  // mines_pos.foldLeft(true)((acc, pos) => acc && player_board.tile_map(pos) == PlayerTile.Flagged
+  
 
 def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, new_tile: PlayerTile): PlayerBoard = 
   Board(
@@ -112,7 +120,7 @@ def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): Pl
   val filtered_map = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
   
   filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => update_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
-    
+
 
 // Get neighboring tiles of tile_pos. Check what solutontiles corresponds to neighboring tiles
 // If SolutionTile.Empty reveal_neighbors with updated playerboard at tile_pos

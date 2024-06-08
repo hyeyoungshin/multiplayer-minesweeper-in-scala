@@ -55,7 +55,7 @@ def game_over(state: GameState): Boolean =
 
 def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
   val new_status = 
-    if win(state.solution_board, new_player_board) then
+    if has_won(state.solution_board, new_player_board) then
       Status.Win
     else
       new_player_board.tile_map(tile_pos) match {
