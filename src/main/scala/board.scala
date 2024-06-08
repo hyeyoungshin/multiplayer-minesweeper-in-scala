@@ -49,10 +49,12 @@ enum SolutionTile extends Tile:
 enum PlayerTile extends Tile:
   case Hidden 
   case Revealed (val tile: SolutionTile)
+  case Flagged
 
   override def toString() = this match {
     case Hidden => "[ ]"
     case Revealed(t) => t.toString()
+    case Flagged => "[F]"
   }
 
 
@@ -70,11 +72,11 @@ def win(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean =
   hidden_pos.foldLeft(true)((acc, pos) => acc && solution_board.tile_map(pos) == SolutionTile.Mine)
 
 
-def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, solutiontile: SolutionTile): PlayerBoard = 
+def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, new_tile: PlayerTile): PlayerBoard = 
   Board(
     xsize = playerboard.xsize,
     ysize = playerboard.ysize,
-    tile_map = playerboard.tile_map + (tile_pos -> PlayerTile.Revealed(solutiontile))
+    tile_map = playerboard.tile_map + (tile_pos -> new_tile)
   )  
 
 
@@ -90,7 +92,7 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coo
   // assuming playertile at tile_pos is Hidden
   // assuming solution_tile can be Mine which we deal later
   val solution_tile = solutionboard.tile_map(tile_pos)
-  val updated_board = update_board(playerboard, tile_pos, solution_tile)
+  val updated_board = update_board(playerboard, tile_pos, PlayerTile.Revealed(solution_tile))
   
   solution_tile match {
     case SolutionTile.Empty => reveal_neighbors(solutionboard, updated_board, tile_pos)
@@ -109,8 +111,8 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coo
 def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard =
   val filtered_map = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
   
-  filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => update_board(acc, tile_pos, SolutionTile.Mine))
-  
+  filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => update_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
+    
 
 // Get neighboring tiles of tile_pos. Check what solutontiles corresponds to neighboring tiles
 // If SolutionTile.Empty reveal_neighbors with updated playerboard at tile_pos
@@ -128,11 +130,11 @@ def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, til
 
 
 def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, loc: List[Coordinate]): PlayerBoard =
-    loc.foldLeft(playerboard)((acc, tile_pos) => reveal(solutionboard, acc, tile_pos))
+  loc.foldLeft(playerboard)((acc, tile_pos) => reveal(solutionboard, acc, tile_pos))
 
 
-// def flag(solutionboard, playerboard, tile_pos: Coordinate): PlayerBoard = 
-//   update_board(playerboard, tile_pos, Flag)
+def flag(playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = 
+  update_board(playerboard, tile_pos, PlayerTile.Flagged)
 
 
 def neighbors_inbounds(xsize: Int, ysize: Int, tile_pos: Coordinate): List[Coordinate] = 

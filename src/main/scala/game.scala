@@ -62,17 +62,21 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
         case PlayerTile.Revealed(SolutionTile.Mine) => Status.Lose
         case PlayerTile.Revealed(SolutionTile.Empty) => Status.Continue
         case PlayerTile.Revealed(SolutionTile.Hint(n)) => Status.Continue
+        case PlayerTile.Flagged => Status.Continue
         case _ => throw IllegalStateException("tile cannot be hidden.")
       }
     
   GameState(state.solution_board, new_player_board, new_status)
 
 
-def play(state: GameState, tile_pos: Coordinate): GameState = 
+def play(state: GameState, tile_pos: Coordinate, reveal_or_flag: String): GameState = 
   state.status match {
       case Status.Continue => 
-        val cur_playerboard = reveal(state.solution_board, state.player_board, tile_pos) 
-        
+        val cur_playerboard = reveal_or_flag match {
+          case "R" => reveal(state.solution_board, state.player_board, tile_pos) 
+          case "F" => flag(state.player_board, tile_pos)
+          case _ => state.player_board
+        }
         update_state(state, cur_playerboard, tile_pos)
       case _ => throw IllegalStateException()
     }
@@ -118,7 +122,9 @@ def parse_and_validate(state: GameState, user_input: String): Option[InputCoordi
     val valid_input = get_valid_input(state)
     val tile_pos = convert_input_coordinate(valid_input)
 
-    state = play(state, tile_pos)
+    println("Reveal for R or flag for F.")
+    val reveal_or_flag = readLine()
+    state = play(state, tile_pos, reveal_or_flag)
     state.print_state
 
 
