@@ -1,54 +1,18 @@
+import scala.util.Random
 import scala.io.StdIn.readLine
 
 
-val BOARD_SIZE = (5, 5)
-val NUM_MINES = 5
-
-enum Status:
+enum GameStatus:
   case Win
   case Lose
   case Continue
 
-  def print_status: Unit = 
-    this match {
-      case Win => println("You win!")
-      case Lose => println("You lost...")
-      case Continue => ()
-    }
+case class GameState (val solution_board: SolutionBoard, 
+                      val player_board: PlayerBoard, 
+                      val status: GameStatus)
 
-
-case class GameState(val solution_board: SolutionBoard, val player_board: PlayerBoard, val status: Status):
-  def print_state: Unit = 
-    player_board.print_board
-    status.print_status
-
-
-def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean = 
-  val tile_pos = convert_input_coordinate(user_input)
-  state.player_board.within_boundary(tile_pos) && state.player_board.is_hidden(tile_pos)
-
-
-def parse_user_input_helper(user_input: String): Option[Array[Int]] = 
-  try {
-    Some(user_input.split(",").map(_.toInt))
-  } catch {
-    case _: NumberFormatException => None
-  }
-
-
-def parse_user_input(user_input: String): Option[InputCoordinate] =
-  val option_parsed = parse_user_input_helper(user_input)
-
-  option_parsed match {
-    case Some(int_arr) => { 
-      int_arr.length match {
-        case 2 => Some(InputCoordinate(int_arr(0), int_arr(1)))
-        case _ => None
-      }
-    }
-    case None => None
-  }
-  
+val BOARD_SIZE = (5, 5)
+val NUM_MINES = 5
 
 def new_game(): GameState = 
   val mine_locations = generate_mine_locations(NUM_MINES, BOARD_SIZE)
@@ -56,36 +20,20 @@ def new_game(): GameState =
   val solution_board = create_solutionboard(mine_board)
   val initial_board = create_playerboard(BOARD_SIZE._1, BOARD_SIZE._2)
   
-  GameState(solution_board, initial_board, Status.Continue)
+  GameState(solution_board, initial_board, GameStatus.Continue)
 
 
 def game_over(state: GameState): Boolean = 
   state.status match {
-    case Status.Lose => true
-    case Status.Win => true
-    case Status.Continue => false
+    case GameStatus.Lose => true
+    case GameStatus.Win => true
+    case GameStatus.Continue => false
   }
-
-
-def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
-  val new_status = 
-    if has_won(state.solution_board, new_player_board) then
-      Status.Win
-    else
-      new_player_board.tile_map(tile_pos) match {
-        case PlayerTile.Revealed(SolutionTile.Mine) => Status.Lose
-        case PlayerTile.Revealed(SolutionTile.Empty) => Status.Continue
-        case PlayerTile.Revealed(SolutionTile.Hint(n)) => Status.Continue
-        case PlayerTile.Flagged => Status.Continue
-        case _ => throw IllegalStateException("tile cannot be hidden.")
-      }
-    
-  GameState(state.solution_board, new_player_board, new_status)
 
 
 def play(state: GameState, tile_pos: Coordinate, reveal_or_flag: String): GameState = 
   state.status match {
-      case Status.Continue => 
+      case GameStatus.Continue => 
         val cur_playerboard = reveal_or_flag match {
           case "R" => reveal(state.solution_board, state.player_board, tile_pos) 
           case "F" => flag(state.player_board, tile_pos)
@@ -96,52 +44,54 @@ def play(state: GameState, tile_pos: Coordinate, reveal_or_flag: String): GameSt
     }
 
 
-// * Promt user with input request until it is valid to use
-// * valid input is within range of the board, fresh, length = 2 
-// ** You give
-// state: GameState
-// ** You get
-// a valid user input for a tile position to reveal
-def get_valid_input(state: GameState): InputCoordinate = 
-  println("Enter a valid tile position separated by a comma: ")
-  val user_input = readLine()
+def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
+  val num_mines = solution_board.tile_map.count((_, tile) => tile == SolutionTile.Mine)
+  val num_hidden = player_board.tile_map.count((_, tile) => tile == PlayerTile.Hidden)
+  val num_flagged = player_board.tile_map.count((_, tile) => tile == PlayerTile.Flagged)
+
+  num_hidden == num_mines || num_flagged == num_mines
+
+
+def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
+  val new_status = 
+    if has_won(state.solution_board, new_player_board) then
+      GameStatus.Win
+    else
+      new_player_board.tile_map(tile_pos) match {
+        case PlayerTile.Revealed(SolutionTile.Mine) => GameStatus.Lose
+        case PlayerTile.Revealed(SolutionTile.Empty) => GameStatus.Continue
+        case PlayerTile.Revealed(SolutionTile.Hint(n)) => GameStatus.Continue
+        case PlayerTile.Flagged => GameStatus.Continue
+        case _ => throw IllegalStateException("tile cannot be hidden.")
+      }
+    
+  GameState(state.solution_board, new_player_board, new_status)
+
+
+def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
+  var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
+  val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
   
-  val parsed_input = parse_and_validate(state, user_input)
-  parsed_input match {
-    case Some(valid_input) => valid_input
-    case None => get_valid_input(state)
-  }
-
-
-def parse_and_validate(state: GameState, user_input: String): Option[InputCoordinate] = 
-  val parsed_input = parse_user_input(user_input)
-  parsed_input match {
-    case Some(parsed) => valid_user_input(state, parsed) match {
-      case true => Some(parsed)
-      case false => None
-    }
-    case None => None
-  }
-
-
-@main def game(): Unit = 
-
-  print_start()
-
-  var state = new_game()
-
-  state.print_state
-
-  while !game_over(state) do 
-    val valid_input = get_valid_input(state)
-    val tile_pos = convert_input_coordinate(valid_input)
-
-    println("Reveal for R or flag for F.")
-    val reveal_or_flag = readLine()
-    state = play(state, tile_pos, reveal_or_flag)
-    state.print_state
+  val mine_locations = random_coordinates.take(num_mines)
+  mine_locations.foreach((x, y) => board(x)(y) = 1)
+  board
 
 
 // TODO:
 // Separate Game(model) and text ui(view).
 // Game - Coordinate || text ui - InputCoordinate
+// To clean up, we rebuilt via Metals
+// Had nested sbt files 
+
+
+// // tiles and mines ratio
+// enum Difficulty:
+//   case Easy //  12.6%
+//   case Intermediate // 18.1%
+//   case Expert // 20.6%
+
+
+// def flagged_equals_mines(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
+  // val mines_pos = solution_board.tile_map.filter((pos, tile) => tile == SolutionTile.Mine).keys
+  // mines_pos.foldLeft(true)((acc, pos) => acc && player_board.tile_map(pos) == PlayerTile.Flagged
+  
