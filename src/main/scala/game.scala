@@ -28,11 +28,25 @@ def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean =
   state.player_board.within_boundary(tile_pos) && state.player_board.is_hidden(tile_pos)
 
 
-def parse_user_input(user_input: String): Option[InputCoordinate] = 
-  val int_arr = user_input.split(",").map(_.toInt)
-  int_arr.length match {
-    case 2 => Some(InputCoordinate(int_arr(0), int_arr(1)))
-    case _ => None
+def parse_user_input_helper(user_input: String): Option[Array[Int]] = 
+  try {
+    Some(user_input.split(",").map(_.toInt))
+  } catch {
+    case _: NumberFormatException => None
+  }
+
+
+def parse_user_input(user_input: String): Option[InputCoordinate] =
+  val option_parsed = parse_user_input_helper(user_input)
+
+  option_parsed match {
+    case Some(int_arr) => { 
+      int_arr.length match {
+        case 2 => Some(InputCoordinate(int_arr(0), int_arr(1)))
+        case _ => None
+      }
+    }
+    case None => None
   }
   
 
