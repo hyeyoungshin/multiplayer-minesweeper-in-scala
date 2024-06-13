@@ -26,19 +26,19 @@ class Minesweeper extends AnyFunSuite {
   }
 
   test("get_solutiontile_at-hint") {
-    val test_tile = get_solutiontile_at(mineboard, test_pos)
+    val test_tile = generate_solutiontile_at(mineboard, test_pos)
     
     assert(test_tile == SolutionTile.Hint(2))
   }
 
   test("get_solutiontile_at-empty") {
-    val test_tile = get_solutiontile_at(mineboard, Coordinate(0, 0))
+    val test_tile = generate_solutiontile_at(mineboard, Coordinate(0, 0))
     
     assert(test_tile == SolutionTile.Empty)
   }
 
   test("get_solutiontile_at-mine") {
-    val test_tile = get_solutiontile_at(mineboard, Coordinate(0, 2))
+    val test_tile = generate_solutiontile_at(mineboard, Coordinate(0, 2))
     
     assert(test_tile == SolutionTile.Mine)
   }
