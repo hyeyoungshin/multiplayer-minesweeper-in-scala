@@ -9,6 +9,17 @@ case class GameState (val solution_board: SolutionBoard,
                       val player_board: PlayerBoard, 
                       val status: GameStatus)
 
+enum PlayerAction:
+  case Reveal (pos: Coordinate)
+  case Flag (pos: Coordinate)
+  case Unflag (pos: Coordinate)
+
+  // Method to extract the position
+  def extract_pos: Coordinate = this match
+    case Flag(pos) => pos
+    case Reveal(pos) => pos
+    case Unflag(pos) => pos
+
 val BOARD_SIZE = (5, 5)
 val NUM_MINES = 5
 
@@ -31,17 +42,21 @@ def game_over(state: GameState): Boolean =
 
 // TODO: add enum UserAction: case Reveal, Flag
 // It isn't model's job to handle user input here
-def play(state: GameState, tile_pos: Coordinate, reveal_or_flag: String): GameState = 
+def play(state: GameState, player_action: PlayerAction): GameState = 
   state.status match {
-      case GameStatus.Continue => 
-        val cur_playerboard = reveal_or_flag match {
-          // TODO: remove "R" and "F" and use internal representation
-          case "R" => reveal(state.solution_board, state.player_board, tile_pos) 
-          case "F" => flag(state.player_board, tile_pos)
-          case _ => state.player_board
+      case GameStatus.Continue => {
+        val new_playerboard = player_action match {
+          case PlayerAction.Reveal(pos) => Some(reveal(state.solution_board, state.player_board, pos))
+          case PlayerAction.Flag(pos) => flag(state.player_board, pos)
+          case PlayerAction.Unflag(pos) => unflag(state.player_board, pos)
         }
-        update_state(state, cur_playerboard, tile_pos)
-      case _ => throw IllegalStateException()
+
+        new_playerboard match {
+          case Some(playerboard) => update_state(state, playerboard, player_action.extract_pos)
+          case None => throw IllegalStateException("player action always results in new board.")
+        }
+      }
+      case _ => throw IllegalStateException("you can play game only in Continue status.")
     }
 
 
@@ -60,9 +75,9 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
       new_player_board.tile_map(tile_pos) match {
         case PlayerTile.Revealed(SolutionTile.Mine) => GameStatus.Lose
         case PlayerTile.Revealed(SolutionTile.Empty) => GameStatus.Continue
-        case PlayerTile.Revealed(SolutionTile.Hint(n)) => GameStatus.Continue
+        case PlayerTile.Revealed(SolutionTile.Hint(_)) => GameStatus.Continue
         case PlayerTile.Flagged => GameStatus.Continue
-        case _ => throw IllegalStateException("tile cannot be hidden.")
+        case PlayerTile.Hidden => GameStatus.Continue
       }
     
   GameState(state.solution_board, new_player_board, new_status)

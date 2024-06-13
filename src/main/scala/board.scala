@@ -22,7 +22,7 @@ type MineBoard = Board[Boolean]
 enum SolutionTile: 
   case Empty
   case Mine
-  case Hint (val hint: Int)
+  case Hint (hint: Int)
   override def toString() = this match {
     case Empty => "[E]"
     case Mine => "[x]"
@@ -30,13 +30,12 @@ enum SolutionTile:
   }
 
 enum PlayerTile:
-  case Hidden //(val flagged: Boolean)
-  case Revealed (val tile: SolutionTile)
+  case Hidden
+  case Revealed (tile: SolutionTile)
   case Flagged
 
   override def toString() = this match {
     case Hidden => "[ ]"
-    // case Hidden(true) => "[F]"
     case Revealed(t) => t.toString()
     case Flagged => "[F]"
   }
@@ -174,8 +173,20 @@ def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, loc: Lis
   loc.foldLeft(playerboard)((acc, tile_pos) => reveal(solutionboard, acc, tile_pos))
 
 
-def flag(playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = 
-  update_board(playerboard, tile_pos, PlayerTile.Hidden)
+def flag(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] = 
+  playerboard.tile_map(tile_pos) match {
+    case PlayerTile.Hidden => Some(update_board(playerboard, tile_pos, PlayerTile.Flagged))
+    case PlayerTile.Revealed(_) => None
+    case PlayerTile.Flagged => None
+  }
+  
+
+def unflag(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] = 
+  playerboard.tile_map(tile_pos) match {
+    case PlayerTile.Hidden => None
+    case PlayerTile.Revealed(_) => None
+    case PlayerTile.Flagged => Some(update_board(playerboard, tile_pos, PlayerTile.Hidden))
+  }
 
 
 ///////////////

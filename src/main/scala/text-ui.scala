@@ -8,13 +8,11 @@ import scala.io.StdIn.readLine
   print_state(state)
 
   while !game_over(state) do 
-    // TODO: get_valid_action
-    val valid_input = get_valid_inputcoordinate(state)
-    val tile_pos = convert_input_coordinate(valid_input)
+    val valid_input_coordinate = get_valid_input_coordinate(state)
+    val tile_pos = convert_input_coordinate(valid_input_coordinate)
+    val valid_player_action = get_valid_player_action(tile_pos)
 
-    println("Reveal for R or flag for F.")
-    val reveal_or_flag = readLine()
-    state = play(state, tile_pos, reveal_or_flag)
+    state = play(state, valid_player_action)
     print_state(state)
 
 
@@ -48,14 +46,26 @@ def print_state(state: GameState): Unit =
 // state: GameState
 // ** You get
 // a valid user input for a tile position to revearl
-def get_valid_inputcoordinate(state: GameState): InputCoordinate = 
-  println("Enter a valid tile position separated by a comma: ")
-  val user_input = readLine()
+def get_valid_input_coordinate(state: GameState): InputCoordinate = 
+  println("Enter a tile position: ")
+  val player_input = readLine()
   
-  val parsed_input = parse_and_validate(state, user_input)
+  val parsed_input = parse_and_validate(state, player_input)
   parsed_input match {
     case Some(valid_input) => valid_input
-    case None => get_valid_inputcoordinate(state)
+    case None => get_valid_input_coordinate(state)
+  }
+
+
+def get_valid_player_action(pos: Coordinate): PlayerAction = 
+  println("Enter an action. R for reveal, F for flag, U for unflag: ")
+  val player_input = readLine()
+  
+  player_input match {
+    case "R" => PlayerAction.Reveal(pos)
+    case "F" => PlayerAction.Flag(pos)
+    case "U" => PlayerAction.Unflag(pos)
+    case _ => get_valid_player_action(pos)
   }
 
 
@@ -94,4 +104,4 @@ def parse_user_input_helper(user_input: String): Option[Array[Int]] =
 
 def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean = 
   val tile_pos = convert_input_coordinate(user_input)
-  state.player_board.within_boundary(tile_pos) && state.player_board.is_hidden(tile_pos)
+  state.player_board.within_boundary(tile_pos) // && state.player_board.is_hidden(tile_pos)
