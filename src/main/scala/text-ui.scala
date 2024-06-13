@@ -1,7 +1,6 @@
 import scala.io.StdIn.readLine
 
 @main def text_ui_game(): Unit = 
-
   print_start()
 
   var state = new_game()
@@ -9,7 +8,8 @@ import scala.io.StdIn.readLine
   print_state(state)
 
   while !game_over(state) do 
-    val valid_input = get_valid_input(state)
+    // TODO: get_valid_action
+    val valid_input = get_valid_inputcoordinate(state)
     val tile_pos = convert_input_coordinate(valid_input)
 
     println("Reveal for R or flag for F.")
@@ -48,14 +48,14 @@ def print_state(state: GameState): Unit =
 // state: GameState
 // ** You get
 // a valid user input for a tile position to revearl
-def get_valid_input(state: GameState): InputCoordinate = 
+def get_valid_inputcoordinate(state: GameState): InputCoordinate = 
   println("Enter a valid tile position separated by a comma: ")
   val user_input = readLine()
   
   val parsed_input = parse_and_validate(state, user_input)
   parsed_input match {
     case Some(valid_input) => valid_input
-    case None => get_valid_input(state)
+    case None => get_valid_inputcoordinate(state)
   }
 
 

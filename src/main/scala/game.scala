@@ -1,6 +1,4 @@
 import scala.util.Random
-import scala.io.StdIn.readLine
-
 
 enum GameStatus:
   case Win
@@ -31,10 +29,13 @@ def game_over(state: GameState): Boolean =
   }
 
 
+// TODO: add enum UserAction: case Reveal, Flag
+// It isn't model's job to handle user input here
 def play(state: GameState, tile_pos: Coordinate, reveal_or_flag: String): GameState = 
   state.status match {
       case GameStatus.Continue => 
         val cur_playerboard = reveal_or_flag match {
+          // TODO: remove "R" and "F" and use internal representation
           case "R" => reveal(state.solution_board, state.player_board, tile_pos) 
           case "F" => flag(state.player_board, tile_pos)
           case _ => state.player_board
@@ -47,9 +48,8 @@ def play(state: GameState, tile_pos: Coordinate, reveal_or_flag: String): GameSt
 def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
   val num_mines = solution_board.tile_map.count((_, tile) => tile == SolutionTile.Mine)
   val num_hidden = player_board.tile_map.count((_, tile) => tile == PlayerTile.Hidden)
-  val num_flagged = player_board.tile_map.count((_, tile) => tile == PlayerTile.Flagged)
 
-  num_hidden == num_mines || num_flagged == num_mines
+  num_hidden == num_mines
 
 
 def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
@@ -68,6 +68,10 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
   GameState(state.solution_board, new_player_board, new_status)
 
 
+// TODO: User Internal Representation rather than Arrays and Strings 
+// Use Coordinate and Board (skip Array[Array[Int]])
+// MineBoard as return type
+// Move to Board.scala
 def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
   var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
   val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
