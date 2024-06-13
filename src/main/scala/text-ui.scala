@@ -10,7 +10,7 @@ import scala.io.StdIn.readLine
   while !game_over(state) do 
     val valid_input_coordinate = get_valid_input_coordinate(state)
     val tile_pos = convert_input_coordinate(valid_input_coordinate)
-    val valid_player_action = get_valid_player_action(tile_pos)
+    val valid_player_action = get_valid_player_action(state, tile_pos)
 
     state = play(state, valid_player_action)
     print_state(state)
@@ -40,40 +40,88 @@ def print_state(state: GameState): Unit =
     print_status(state.status)
 
 
-// * Promt user with input request until it is valid
-// * valid input is within range of the board, fresh, a pair of int
-// ** You give
-// state: GameState
-// ** You get
-// a valid user input for a tile position to revearl
+// Promt user with input request until it is valid
+// valid input is a tile position within range of the board
 def get_valid_input_coordinate(state: GameState): InputCoordinate = 
   println("Enter a tile position: ")
   val player_input = readLine()
   
-  val parsed_input = parse_and_validate(state, player_input)
-  parsed_input match {
-    case Some(valid_input) => valid_input
+  val parsed_and_validated = parse_and_validate(state, player_input)
+  parsed_and_validated match {
+    case Some(input_coordinate) => input_coordinate
     case None => get_valid_input_coordinate(state)
   }
 
 
-def get_valid_player_action(pos: Coordinate): PlayerAction = 
+def parse_player_input(input: String, pos: Coordinate): Option[PlayerAction] = 
+  input match {
+    case "R" => Some(PlayerAction.Reveal(pos))
+    case "F" => Some(PlayerAction.Flag(pos))
+    case "U" => Some(PlayerAction.Unflag(pos))
+    case _ => None
+  }
+
+
+def valid_player_action(state: GameState, pos: Coordinate, action: PlayerAction): Boolean = 
+  val playertile = state.player_board.tile_map(pos)
+
+  action match {
+    case PlayerAction.Flag(_) => playertile == PlayerTile.Hidden
+    case PlayerAction.Reveal(_) => playertile == PlayerTile.Hidden
+    case PlayerAction.Unflag(_) => playertile == PlayerTile.Flagged
+  }
+
+
+def parse_and_validate_player_action(state: GameState, input: String, pos: Coordinate): Option[PlayerAction] = 
+  val parsed_action = parse_player_input(input, pos)
+
+  parsed_action match {
+    case Some(action) => valid_player_action(state, pos, action) match {
+      case true => Some(action)
+      case false => None
+    }
+    case None => None
+  }
+
+
+def get_valid_player_action(state: GameState, pos: Coordinate): PlayerAction = 
   println("Enter an action. R for reveal, F for flag, U for unflag: ")
-  val player_input = readLine()
+  val input = readLine()
+  val parsed_and_validated = parse_and_validate_player_action(state, input, pos)
   
-  player_input match {
-    case "R" => PlayerAction.Reveal(pos)
-    case "F" => PlayerAction.Flag(pos)
-    case "U" => PlayerAction.Unflag(pos)
-    case _ => get_valid_player_action(pos)
+  parsed_and_validated match {
+    case Some(player_action) => player_action
+    case None => get_valid_player_action(state, pos)
+  }
+
+
+def print_action(state: GameState, action: PlayerAction): Unit = 
+  val playertile = state.player_board.tile_map(action.extract_pos) 
+  
+  playertile match {
+    case PlayerTile.Flagged => action match {
+      case PlayerAction.Flag(_) => println(s"You can't flag a tile that's been flagged already.") 
+      case PlayerAction.Unflag(_) => println("")
+      case PlayerAction.Reveal(_) => println(s"You can't flag a tile that's been revealed.")
+    }
+    case PlayerTile.Hidden => action match {
+      case PlayerAction.Flag(pos) => println(s"You can't reveal a tile that's been flagged.") 
+      case PlayerAction.Unflag(pos) => println(s"You can't unflag a tile that's hidden.") 
+      case PlayerAction.Reveal(pos) => println("")
+    }
+    case PlayerTile.Revealed(_) => action match {
+      case PlayerAction.Flag(pos) => println(s"You can't flag a tile that's been revealed.") 
+      case PlayerAction.Unflag(pos) => println(s"You can't unflag a tile that's been revealed.") 
+      case PlayerAction.Reveal(pos) => println(s"You can't reveal a tile that's been revealed already.")
+    }
   }
 
 
 def parse_and_validate(state: GameState, user_input: String): Option[InputCoordinate] = 
-  val parsed_input = parse_user_input(user_input)
-  parsed_input match {
-    case Some(parsed) => valid_user_input(state, parsed) match {
-      case true => Some(parsed)
+  val parsed_input_coordinate = parse_user_input(user_input)
+  parsed_input_coordinate match {
+    case Some(input_coordinate) => valid_user_input(state, input_coordinate) match {
+      case true => Some(input_coordinate)
       case false => None
     }
     case None => None
@@ -104,4 +152,4 @@ def parse_user_input_helper(user_input: String): Option[Array[Int]] =
 
 def valid_user_input(state: GameState, user_input: InputCoordinate): Boolean = 
   val tile_pos = convert_input_coordinate(user_input)
-  state.player_board.within_boundary(tile_pos) // && state.player_board.is_hidden(tile_pos)
+  state.player_board.within_boundary(tile_pos)

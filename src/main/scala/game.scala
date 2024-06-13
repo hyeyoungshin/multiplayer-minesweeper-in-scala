@@ -53,18 +53,19 @@ def play(state: GameState, player_action: PlayerAction): GameState =
 
         new_playerboard match {
           case Some(playerboard) => update_state(state, playerboard, player_action.extract_pos)
-          case None => throw IllegalStateException("player action always results in new board.")
+          case None => ??? // get_valid_input()
         }
       }
-      case _ => throw IllegalStateException("you can play game only in Continue status.")
+      case _ => throw IllegalStateException("You can only play game in Continue Status.")
     }
 
 
 def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
   val num_mines = solution_board.tile_map.count((_, tile) => tile == SolutionTile.Mine)
   val num_hidden = player_board.tile_map.count((_, tile) => tile == PlayerTile.Hidden)
+  val num_flagged = player_board.tile_map.count((_, tile) => tile == PlayerTile.Flagged)
 
-  num_hidden == num_mines
+  num_hidden == num_mines && num_flagged == 0
 
 
 def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
