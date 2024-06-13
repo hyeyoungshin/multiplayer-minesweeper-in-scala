@@ -3,6 +3,7 @@
 /////////////////////////////
 
 case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
+  
   def print_board: Unit = 
     val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
     this.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
