@@ -176,8 +176,9 @@ def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, loc: Lis
   loc.foldLeft(playerboard)((acc, tile_pos) => reveal(solutionboard, acc, tile_pos))
 
 
-// TODO: Need to handle flagging Hidden or Revealed tiles better
-// Currently aborts with "player action always results in new board."
+/* update board by flagging player tile at `tile_pos` if the tile is hidden
+return `None` otherwise
+*/
 def flag(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] = 
   playerboard.tile_map(tile_pos) match {
     case PlayerTile.Hidden => Some(update_board(playerboard, tile_pos, PlayerTile.Flagged))
@@ -185,8 +186,10 @@ def flag(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] =
     case PlayerTile.Flagged => None
   }
   
-// TODO: Need to handle unflagging Hidden or Revealed tiles better
-// Currently aborts with "player action always results in new board."
+
+/* update board by unflagging player tile at `tile_pos` if the tile is flagged
+return `None` otherwise
+*/
 def unflag(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] = 
   playerboard.tile_map(tile_pos) match {
     case PlayerTile.Hidden => None
