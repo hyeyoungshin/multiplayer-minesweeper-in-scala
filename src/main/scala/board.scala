@@ -203,8 +203,7 @@ def neighbors_inbounds[T](board: Board[T], tile_pos: Coordinate): List[Coordinat
   val all_neighbors = List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
       (i, j) => Coordinate(tile_pos.x + i, tile_pos.y + j))
   
-  // TODO: use within_boundary
-  all_neighbors.filter(tile_pos => board.within_boundary(tile_pos))
+    all_neighbors.filter(tile_pos => board.within_boundary(tile_pos))
     
     
 def count_neighboring_mines(mineboard: MineBoard, tile_pos: Coordinate): Int = 
