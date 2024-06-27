@@ -56,6 +56,7 @@ def get_valid_input_coordinate(state: GameState): InputCoordinate =
     case None => get_valid_input_coordinate(state)
   }
 
+
 def parse_and_validate(state: GameState, user_input: String): Option[InputCoordinate] = 
   val parsed_input_coordinate = parse_user_input(user_input)
   parsed_input_coordinate match {
@@ -67,6 +68,10 @@ def parse_and_validate(state: GameState, user_input: String): Option[InputCoordi
   }
 
 
+/* parse user input via int array
+for example, 1,1 is [1,1]
+int array of length other than 2 is considered invalid
+*/ 
 def parse_user_input(user_input: String): Option[InputCoordinate] =
   val option_parsed = parse_user_input_helper(user_input)
 
