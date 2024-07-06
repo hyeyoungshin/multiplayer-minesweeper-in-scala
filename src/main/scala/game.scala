@@ -1,5 +1,27 @@
 import scala.util.Random
 
+// enum GameDifficulty:
+//   case Easy 
+//   case Intermediate
+//   case Hard
+
+//   def get_size(): (Int, Int) = this match
+//     case Easy => (3, 3)
+//     case Intermediate => (5, 5)
+//     case Hard => (7, 7)
+
+//   def get_num_mines(): Int = this match
+//     case Easy => 2
+//     case Intermediate => 4
+//     case Hard => 9
+
+case class GameDifficulty(val size: (Int, Int), val num_mines: Int)
+
+final val Easy = GameDifficulty((3, 3), 2)
+final val Intermediate = GameDifficulty((5, 5), 4)
+final val Hard = GameDifficulty((7, 7), 9)
+
+
 enum GameStatus:
   case Win
   case Lose
@@ -9,25 +31,24 @@ case class GameState (val solution_board: SolutionBoard,
                       val player_board: PlayerBoard, 
                       val status: GameStatus)
 
+
 enum PlayerAction:
-  case Reveal (pos: Coordinate)
-  case Flag (pos: Coordinate)
-  case Unflag (pos: Coordinate)
+  case Reveal(pos: Coordinate)
+  case Flag(pos: Coordinate)
+  case Unflag(pos: Coordinate)
 
-  // Method to extract the position
-  def extract_pos: Coordinate = this match
-    case Flag(pos) => pos
+  def get_pos() = this match
     case Reveal(pos) => pos
+    case Flag(pos) => pos
     case Unflag(pos) => pos
+  
 
-val BOARD_SIZE = (5, 5)
-val NUM_MINES = 5
 
-def new_game(): GameState = 
-  val mine_locations = generate_mine_locations(NUM_MINES, BOARD_SIZE)
-  val mine_board = create_mineboard(mine_locations)
+def new_game(d: GameDifficulty): GameState = 
+  val mine_board = generate_mine_locations(d)
+  // val mine_board = create_mineboard(mine_locations)
   val solution_board = create_solutionboard(mine_board)
-  val initial_board = create_playerboard(BOARD_SIZE._1, BOARD_SIZE._2)
+  val initial_board = create_playerboard(mine_board.xsize, mine_board.ysize)
   
   GameState(solution_board, initial_board, GameStatus.Continue)
 
@@ -40,9 +61,7 @@ def game_over(state: GameState): Boolean =
   }
 
 
-// TODO: add enum UserAction: case Reveal, Flag
-// It isn't model's job to handle user input here
-def play(state: GameState, player_action: PlayerAction): GameState = 
+def play(state: GameState, player_action: PlayerAction, pos: Coordinate): GameState = 
   state.status match {
       case GameStatus.Continue => {
         val new_playerboard = player_action match {
@@ -52,7 +71,7 @@ def play(state: GameState, player_action: PlayerAction): GameState =
         }
 
         new_playerboard match {
-          case Some(playerboard) => update_state(state, playerboard, player_action.extract_pos)
+          case Some(playerboard) => update_state(state, playerboard, pos)
           case None => ??? // get_valid_input()
         }
       }
@@ -60,6 +79,10 @@ def play(state: GameState, player_action: PlayerAction): GameState =
     }
 
 
+/* player wins if they find all mines which means
+number of hidden playertiles equals number of mines AND
+number of flagged playertiles is 0
+*/
 def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = 
   val num_mines = solution_board.tile_map.count((_, tile) => tile == SolutionTile.Mine)
   val num_hidden = player_board.tile_map.count((_, tile) => tile == PlayerTile.Hidden)
@@ -88,13 +111,23 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
 // Use Coordinate and Board (skip Array[Array[Int]])
 // MineBoard as return type
 // Move to Board.scala
-def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
-  var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
-  val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
+def generate_mine_locations(difficulty: GameDifficulty): MineBoard =
+  val xsize = difficulty.size._1
+  val ysize = difficulty.size._2
+  var arr_board = Array.fill(xsize)(Array.fill(ysize)(0))
+  val random_coordinates = Random.shuffle(generate_coordinate_keys(xsize, ysize))
   
-  val mine_locations = random_coordinates.take(num_mines)
-  mine_locations.foreach((x, y) => board(x)(y) = 1)
-  board
+  val mine_locations = random_coordinates.take(difficulty.num_mines)
+  mine_locations.foreach((x, y) => arr_board(x)(y) = 1)
+  create_mineboard(arr_board)
+
+// def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
+//   var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
+//   val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
+  
+//   val mine_locations = random_coordinates.take(num_mines)
+//   mine_locations.foreach((x, y) => board(x)(y) = 1)
+//   board
 
 
 // TODO:
