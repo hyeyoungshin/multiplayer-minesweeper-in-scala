@@ -124,16 +124,23 @@ the tile at input coordinate is not revealed
  */
 def valid_coordinate(state: GameState, user_input: InputCoordinate): Boolean = 
   val tile_pos = convert_input_coordinate(user_input)
-  state.player_board.within_boundary(tile_pos) && 
-  ((state.player_board.tile_map(tile_pos) == PlayerTile.Hidden) || 
-   (state.player_board.tile_map(tile_pos) == PlayerTile.Flagged))
+  judge_coordinate(state, tile_pos) match {
+    case Left(bool) => bool && state.player_board.within_boundary(tile_pos)
+    case Right(str) => println(str); false
+  }
+
+def judge_coordinate(state: GameState, pos: Coordinate): Either[Boolean, String] = 
+  state.player_board.tile_map(pos) match {
+    case PlayerTile.Revealed(_) => Right("The tile is alreay revealed.\n")
+    case _ => Left(true)
+  }
 
 
 ///////////////////
 // Player Action //
 ///////////////////
 def get_valid_action(state: GameState, pos: Coordinate): PlayerAction = 
-  println("Enter an action. R for reveal, F for flag, U for unflag: ")
+  println("Enter an action: R for reveal, F for flag, U for unflag")
   val input = readLine()
   val parsed_and_validated = parse_action(input, pos).filter(x => valid_action(state, x))
   
@@ -150,20 +157,20 @@ def parse_action(input: String, pos: Coordinate): Option[PlayerAction] =
     case _ => None
   }
 
-def valid_action(state: GameState, action: PlayerAction): Boolean =
+def valid_action(state: GameState, action: PlayerAction): Boolean = 
   val playertile = state.player_board.tile_map(action.get_pos())
-
-  action match {
-    case PlayerAction.Flag(_) => playertile == PlayerTile.Hidden
-    case PlayerAction.Reveal(_) => playertile == PlayerTile.Hidden
-    case PlayerAction.Unflag(_) => playertile == PlayerTile.Flagged
+  judge_action(action, playertile) match {
+    case Left(bool) => bool
+    case Right(str) => println(str); false // is there another way to do this?
   }
 
-
-
-// TODO: implement print_action
-// Think about how to use Either[PlayerAction, String] for print_action
-// if (playertile == PlayerTile.Hidden) then Left(action) else Right("error message")
+def judge_action(action: PlayerAction, playertile: PlayerTile): Either[Boolean, String] = 
+  action match {
+    case PlayerAction.Flag(_) => if playertile == PlayerTile.Hidden then Left(true) else Right("You cannot flag a tile that's already revealed or flagged.\n")
+    case PlayerAction.Reveal(_) => if playertile == PlayerTile.Hidden then Left(true) else Right("You cannot reveal a tile that's already revealed or flagged.\n")
+    case PlayerAction.Unflag(_) => if playertile == PlayerTile.Flagged then Left(true) else Right("You cannot unflag a tile that's not flagged.\n")
+  }
+  
 
 // Rust style Result type
 // enum ValidationResult:
@@ -173,24 +180,3 @@ def valid_action(state: GameState, action: PlayerAction): Boolean =
 // enum Result[T,E]:
 //   case Ok(result: T)
 //   case Error(message: E)
-
-// def print_action(state: GameState, action: PlayerAction): Unit = 
-//   val playertile = state.player_board.tile_map(action.extract_pos) 
-  
-//   playertile match {
-//     case PlayerTile.Flagged => action match {
-//       case PlayerAction.Flag(_) => println(s"You can't flag a tile that's been flagged already.") 
-//       case PlayerAction.Unflag(_) => println("")
-//       case PlayerAction.Reveal(_) => println(s"You can't flag a tile that's been revealed.")
-//     }
-//     case PlayerTile.Hidden => action match {
-//       case PlayerAction.Flag(pos) => println(s"You can't reveal a tile that's been flagged.") 
-//       case PlayerAction.Unflag(pos) => println(s"You can't unflag a tile that's hidden.") 
-//       case PlayerAction.Reveal(pos) => println("")
-//     }
-//     case PlayerTile.Revealed(_) => action match {
-//       case PlayerAction.Flag(pos) => println(s"You can't flag a tile that's been revealed.") 
-//       case PlayerAction.Unflag(pos) => println(s"You can't unflag a tile that's been revealed.") 
-//       case PlayerAction.Reveal(pos) => println(s"You can't reveal a tile that's been revealed already.")
-//     }
-//   }
