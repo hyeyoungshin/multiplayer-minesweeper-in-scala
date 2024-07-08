@@ -17,7 +17,7 @@ def convert_input_coordinates (input_coordinates: List[InputCoordinate]): List[C
 // board : Array of Arrays of type T, where T can be Int for input board or String for Tile
 // ** You get
 // print out of the board  
-def print[T](board: Array[Array[T]]): Unit = 
+def print_helper[T](board: Array[Array[T]]): Unit = 
     println(board.map(_.mkString("")).mkString("\n"))
     println("\n")
 

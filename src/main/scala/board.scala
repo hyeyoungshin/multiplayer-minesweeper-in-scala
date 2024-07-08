@@ -1,3 +1,5 @@
+import scala.util.Random
+
 /////////////////////////////
 //// Data types for Board////
 /////////////////////////////
@@ -5,9 +7,13 @@
 case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
   
   def print_board: Unit = 
+    // Clear the screen and move the cursor to the top-left corner
+    print("\u001b[2J")
+    print("\u001b[H")
+
     val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
     this.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
-    print[String](str_board)
+    print_helper[String](str_board)
 
   def within_boundary(tile_pos: Coordinate): Boolean = 
     tile_pos.x > -1 && tile_pos.y > -1 && tile_pos.x < xsize && tile_pos.y < ysize
@@ -55,6 +61,17 @@ case class Coordinate (val x: Int, val y: Int)
 ////////////////////////
 //// Creating Board/////
 ////////////////////////
+
+/* mine locations are generated randomly depending on game difficulty */
+def generate_mine_locations(difficulty: GameDifficulty): MineBoard =
+  val xsize = difficulty.size._1
+  val ysize = difficulty.size._2
+  var arr_board = Array.fill(xsize)(Array.fill(ysize)(0))
+  val random_coordinates = Random.shuffle(generate_coordinate_keys(xsize, ysize))
+  
+  val mine_locations = random_coordinates.take(difficulty.num_mines)
+  mine_locations.foreach((x, y) => arr_board(x)(y) = 1)
+  create_mineboard(arr_board)
 
 // * Creates SolutionBoard from MineBoard at the start of game
 // * Derives Hint from the mine locations in MineBoard

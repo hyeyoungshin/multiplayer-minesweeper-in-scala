@@ -1,5 +1,3 @@
-import scala.util.Random
-
 // enum GameDifficulty:
 //   case Easy 
 //   case Intermediate
@@ -46,7 +44,6 @@ enum PlayerAction:
 
 def new_game(d: GameDifficulty): GameState = 
   val mine_board = generate_mine_locations(d)
-  // val mine_board = create_mineboard(mine_locations)
   val solution_board = create_solutionboard(mine_board)
   val initial_board = create_playerboard(mine_board.xsize, mine_board.ysize)
   
@@ -107,30 +104,8 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
   GameState(state.solution_board, new_player_board, new_status)
 
 
-// TODO: User Internal Representation rather than Arrays and Strings 
-// Use Coordinate and Board (skip Array[Array[Int]])
-// MineBoard as return type
-// Move to Board.scala
-def generate_mine_locations(difficulty: GameDifficulty): MineBoard =
-  val xsize = difficulty.size._1
-  val ysize = difficulty.size._2
-  var arr_board = Array.fill(xsize)(Array.fill(ysize)(0))
-  val random_coordinates = Random.shuffle(generate_coordinate_keys(xsize, ysize))
-  
-  val mine_locations = random_coordinates.take(difficulty.num_mines)
-  mine_locations.foreach((x, y) => arr_board(x)(y) = 1)
-  create_mineboard(arr_board)
 
-// def generate_mine_locations(num_mines: Int, board_size: (Int, Int)): Array[Array[Int]] =
-//   var board = Array.fill(board_size._1)(Array.fill(board_size._2)(0))
-//   val random_coordinates = Random.shuffle(generate_coordinate_keys(board_size._1, board_size._2))
-  
-//   val mine_locations = random_coordinates.take(num_mines)
-//   mine_locations.foreach((x, y) => board(x)(y) = 1)
-//   board
-
-
-// TODO:
+// KEEP IN MIND:
 // Separate Game(model) and text ui(view).
 // Game - Coordinate || text ui - InputCoordinate
 // To clean up, we rebuilt via Metals
