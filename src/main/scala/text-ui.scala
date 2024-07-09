@@ -1,5 +1,27 @@
 import scala.io.StdIn.readLine
 
+object ColorPrinter:
+  val Reset = "\u001b[0m"
+  val Red = "\u001b[31m"
+  val Blue = "\u001b[34m"
+  val Green = "\u001b[32m"
+
+  def print_in_color(text: String, color: String): Unit = {
+    println(s"$color$text$Reset")
+  }
+
+  // def print_red(text: String): Unit = {
+  //   println(s"$Red$text$Reset")
+  // }
+
+  // def print_blue(text: String): Unit = {
+  //  println(s"$Blue$text$Reset")
+  // }
+
+  // def print_green(text: String): Unit = {
+  //  println(s"$Green$text$Reset")
+  // }
+
 @main def text_ui_game(): Unit = 
   print_start()
   // Not using make_get_valid_input because it does not require `state` and `validate`
@@ -23,10 +45,10 @@ import scala.io.StdIn.readLine
 ////////////////  
 def print_start(): Unit = 
   println("")
-  println("Welcome to the minesweeper game. \n")
-  println("Enter your name: ")
+  ColorPrinter.print_in_color("Welcome to the minesweeper game.\n", ColorPrinter.Blue)
+  ColorPrinter.print_in_color("Enter your name: ", ColorPrinter.Blue)
   val user_name = readLine()
-  println(s"Hello, $user_name!\n")
+  ColorPrinter.print_in_color(s"Hello, $user_name!\n", ColorPrinter.Blue)
   println("")
 
 
@@ -34,7 +56,7 @@ def print_start(): Unit =
 // Game Difficulty //
 /////////////////////  
 def get_valid_difficulty(): GameDifficulty = 
-  println("Choose difficulty: (Easy, Intermediate, Hard)")
+  ColorPrinter.print_in_color("Choose difficulty: (Easy, Intermediate, Hard)", ColorPrinter.Blue)
   val user_input = readLine()
   val parsed = parse_difficulty(user_input)
   
@@ -53,8 +75,8 @@ def parse_difficulty(user_input: String): Option[GameDifficulty] =
 
 def print_difficulty(difficulty: GameDifficulty): Unit = 
   println("")
-  println(s"Starting a game with board size: (${difficulty.size._1} x ${difficulty.size._2}) " +
-    s"and Number of mines: ${difficulty.num_mines}")
+  ColorPrinter.print_in_color(s"Starting a game with board size: (${difficulty.size._1} x ${difficulty.size._2}) " +
+    s"and Number of mines: ${difficulty.num_mines}", ColorPrinter.Blue)
   println("")
 
 
@@ -79,7 +101,7 @@ def print_status(status: GameStatus): Unit =
 def make_get_valid_input[T](message: String, parse: String => Option[T], validate: (GameState, T) => Boolean)
 : GameState => T = 
   def get_valid_input(state: GameState): T = 
-    println(message)
+    ColorPrinter.print_in_color(message, ColorPrinter.Blue)
     val player_input = readLine()
     val parsed_and_validated = parse(player_input).filter(x => validate(state, x))
     parsed_and_validated match {
@@ -99,14 +121,8 @@ int array of length other than 2 is considered invalid
 */ 
 def parse_coordinate(user_input: String): Option[InputCoordinate] =
   val option_parsed = parse_coordinate_helper(user_input)
-  //TODO: use filter
-  option_parsed match {
-    case Some(int_arr) => { 
-      int_arr.length match {
-        case 2 => Some(InputCoordinate(int_arr(0), int_arr(1)))
-        case _ => None
-      }
-    }
+  option_parsed.filter(arr => arr.length == 2) match {
+    case Some(arr) => Some(InputCoordinate(arr(0), arr(1)))
     case None => None
   }
 
@@ -126,7 +142,7 @@ def valid_coordinate(state: GameState, user_input: InputCoordinate): Boolean =
   val tile_pos = convert_input_coordinate(user_input)
   judge_coordinate(state, tile_pos) match {
     case Left(bool) => bool && state.player_board.within_boundary(tile_pos)
-    case Right(str) => println(str); false
+    case Right(str) => ColorPrinter.print_in_color(str, ColorPrinter.Red); false
   }
 
 def judge_coordinate(state: GameState, pos: Coordinate): Either[Boolean, String] = 
@@ -140,7 +156,7 @@ def judge_coordinate(state: GameState, pos: Coordinate): Either[Boolean, String]
 // Player Action //
 ///////////////////
 def get_valid_action(state: GameState, pos: Coordinate): PlayerAction = 
-  println("Enter an action: R for reveal, F for flag, U for unflag")
+  ColorPrinter.print_in_color("Enter an action: R for reveal, F for flag, U for unflag", ColorPrinter.Blue)
   val input = readLine()
   val parsed_and_validated = parse_action(input, pos).filter(x => valid_action(state, x))
   
@@ -161,14 +177,29 @@ def valid_action(state: GameState, action: PlayerAction): Boolean =
   val playertile = state.player_board.tile_map(action.get_pos())
   judge_action(action, playertile) match {
     case Left(bool) => bool
-    case Right(str) => println(str); false // is there another way to do this?
+    case Right(str) => ColorPrinter.print_in_color(str, ColorPrinter.Red); false // is there another way to do this?
   }
 
 def judge_action(action: PlayerAction, playertile: PlayerTile): Either[Boolean, String] = 
   action match {
-    case PlayerAction.Flag(_) => if playertile == PlayerTile.Hidden then Left(true) else Right("You cannot flag a tile that's already revealed or flagged.\n")
-    case PlayerAction.Reveal(_) => if playertile == PlayerTile.Hidden then Left(true) else Right("You cannot reveal a tile that's already revealed or flagged.\n")
-    case PlayerAction.Unflag(_) => if playertile == PlayerTile.Flagged then Left(true) else Right("You cannot unflag a tile that's not flagged.\n")
+    case PlayerAction.Flag(_) => {
+      if playertile == PlayerTile.Hidden then 
+        Left(true) 
+      else 
+        Right("You cannot flag a tile that's already revealed or flagged.\n")
+      }
+    case PlayerAction.Reveal(_) => {
+      if playertile == PlayerTile.Hidden then 
+        Left(true) 
+      else 
+        Right("You cannot reveal a tile that's already revealed or flagged.\n")
+      }
+    case PlayerAction.Unflag(_) => {
+      if playertile == PlayerTile.Flagged then 
+        Left(true) 
+      else 
+        Right("You cannot unflag a tile that's not flagged.\n")
+    }
   }
   
 
