@@ -6,7 +6,9 @@ import scala.util.Random
 
 case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
   
+  // TODO: move print_board to text-ui
   def print_board: Unit = 
+    // TODO: can be standalone print helper
     // Clear the screen and move the cursor to the top-left corner
     print("\u001b[2J")
     print("\u001b[H")

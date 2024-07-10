@@ -13,7 +13,6 @@ object ColorPrinter:
 
 @main def text_ui_game(): Unit = 
   print_start()
-  // Not using make_get_valid_input because it does not require `state` and `validate`
   val difficulty = get_valid_difficulty()
   print_difficulty(difficulty)
 
@@ -22,8 +21,6 @@ object ColorPrinter:
 
   while !game_over(state) do 
     val coordinate = get_valid_coordinate(state)
-    // val coordinate = convert_input_coordinate(input_coordinate)
-    // Not using make_get_valid_input because coordinate is necessary for parsing and validating
     val player_action = get_valid_action(state, coordinate)
     state = play(state, player_action, coordinate)
     print_state(state)
@@ -45,14 +42,8 @@ def print_start(): Unit =
 // Game Difficulty //
 /////////////////////  
 def get_valid_difficulty(): GameDifficulty = 
-  ColorPrinter.print_in_color("Choose difficulty: (Easy, Intermediate, Hard)", ColorPrinter.Blue)
-  val user_input = readLine()
-  val parsed = parse_difficulty(user_input)
-  
-  parsed match {
-    case Right(difficulty) => difficulty
-    case Left(msg) => ColorPrinter.print_in_color(msg, ColorPrinter.Red); get_valid_difficulty()
-  }
+  get_valid_input("Choose difficulty: (Easy, Intermediate, Hard)", parse_difficulty)
+
 
 def parse_difficulty(user_input: String): Either[String, GameDifficulty] = 
   user_input match {
@@ -87,27 +78,24 @@ def print_status(status: GameStatus): Unit =
 //////////////////////
 // Input Coordinate //
 //////////////////////
-def parse_and_validate_coordinate(user_input: String, state: GameState): Either[String, Coordinate] = 
-  parse_coordinate(user_input).flatMap(x => valid_coordinate(state, x))
 
-
-def make_get_valid_input[T](message: String, parse_and_validate: (String, GameState) => Either[String, T])
-: GameState => T = 
-  def get_valid_input(state: GameState): T = 
+def get_valid_input[T](message: String, parse_and_validate: String => Either[String, T])
+: T = 
+  def helper(): T = 
     ColorPrinter.print_in_color(message, ColorPrinter.Blue)
     val player_input = readLine()
-    parse_and_validate(player_input, state) match {
+    parse_and_validate(player_input) match {
       case Right(value) => value
-      case Left(msg) => ColorPrinter.print_in_color(msg, ColorPrinter.Red); get_valid_input(state)
+      case Left(msg) => ColorPrinter.print_in_color(msg, ColorPrinter.Red); helper()
     }
   
-  get_valid_input
+  helper()
 
-val get_valid_coordinate = make_get_valid_input(message = "Enter a tile position:",
-                                                parse_and_validate = parse_and_validate_coordinate)
 
-                                          
-                                                
+def get_valid_coordinate(state: GameState) = 
+  get_valid_input(message = "Enter a tile position:",
+                  parse_and_validate = input => parse_coordinate(input).flatMap(x => valid_coordinate(state, x)))
+
 
 /* parse user input via int array
 for example, 1,1 is [1,1]
