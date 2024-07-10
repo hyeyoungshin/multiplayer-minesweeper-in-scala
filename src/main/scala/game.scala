@@ -13,10 +13,13 @@
 //     case Intermediate => 4
 //     case Hard => 9
 
+
+case class Player(val name: String, val board: PlayerBoard, val tries: Int)
+
 case class GameDifficulty(val size: (Int, Int), val num_mines: Int)
 
 final val Easy = GameDifficulty((3, 3), 2)
-final val Intermediate = GameDifficulty((5, 5), 4)
+final val Medium = GameDifficulty((5, 5), 4)
 final val Hard = GameDifficulty((7, 7), 9)
 
 
@@ -30,16 +33,18 @@ case class GameState (val solution_board: SolutionBoard,
                       val status: GameStatus)
 
 
+// case class PlayerAction(val action: Action, val pos: Coordinate)
+
 enum PlayerAction:
   case Reveal(pos: Coordinate)
   case Flag(pos: Coordinate)
   case Unflag(pos: Coordinate)
 
-  def get_pos() = this match
+  def get_pos(): Coordinate  =this match {
     case Reveal(pos) => pos
     case Flag(pos) => pos
     case Unflag(pos) => pos
-  
+  }
 
 
 def new_game(d: GameDifficulty): GameState = 
