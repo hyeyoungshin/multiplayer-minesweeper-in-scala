@@ -64,8 +64,8 @@ def print_difficulty(difficulty: GameDifficulty): Unit =
 // Game State //
 ////////////////
 def print_state(state: GameState): Unit = 
-    state.player_board.print_board
-    print_status(state.status)
+  print_board(state.player_board)
+  print_status(state.status)
 
 def print_status(status: GameStatus): Unit = 
   status match {
@@ -179,6 +179,32 @@ def valid_action(state: GameState, action: PlayerAction): Either[String, PlayerA
   }
 
 
+//////////////
+// Printers //
+//////////////
+
+// Clear the screen and move the cursor to the top-left corner
+def print_inplace(): Unit = 
+  print("\u001b[2J")
+  print("\u001b[H")
+
+
+// TODO: Print board underneath board size and number of mines info
+def print_board[T](board: Board[T]): Unit = 
+  print_inplace()
+  val str_board = Array.fill(board.xsize)(Array.fill(board.ysize)(""))
+  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
+  print_helper[String](str_board)
+
+
+// * Prints boards in the matrix form (Array of Arrays)
+// ** You give
+// board : Array of Arrays of type T, where T can be Int for input board or String for Tile
+// ** You get
+// print out of the board  
+def print_helper[T](board: Array[Array[T]]): Unit = 
+    println(board.map(_.mkString("")).mkString("\n"))
+    println("\n")
 
   // judge_action(action, playertile) match {
   //   case Left(bool) => bool

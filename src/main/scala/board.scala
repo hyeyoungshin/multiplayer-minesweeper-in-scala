@@ -5,24 +5,15 @@ import scala.util.Random
 /////////////////////////////
 
 case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
-  
-  // TODO: move print_board to text-ui
-  def print_board: Unit = 
-    // TODO: can be standalone print helper
-    // Clear the screen and move the cursor to the top-left corner
-    print("\u001b[2J")
-    print("\u001b[H")
-
-    val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
-    this.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
-    print_helper[String](str_board)
 
   def within_boundary(tile_pos: Coordinate): Boolean = 
     tile_pos.x > -1 && tile_pos.y > -1 && tile_pos.x < xsize && tile_pos.y < ysize
 
+
 type SolutionBoard = Board[SolutionTile]
 type PlayerBoard = Board[PlayerTile]
 type MineBoard = Board[Boolean]
+
 
 enum SolutionTile: 
   case Empty
@@ -33,6 +24,7 @@ enum SolutionTile:
     case Mine => "[x]"
     case Hint(n) => s"[$n]"
   }
+
 
 // case Hidden (flagged: Boolean) allows winning condition to only consider
 // number of Hidden tiles 
@@ -72,6 +64,7 @@ def generate_mine_locations(difficulty: GameDifficulty): MineBoard =
   mine_locations.foreach((x, y) => arr_board(x)(y) = 1)
   create_mineboard(arr_board)
 
+
 // * Creates SolutionBoard from MineBoard at the start of game
 // * Derives Hint from the mine locations in MineBoard
 //
@@ -87,6 +80,7 @@ def create_solutionboard(mineboard: MineBoard): SolutionBoard =
     ysize = mineboard.ysize,
     tile_map = range.map( (x, y) => ( Coordinate(x, y), generate_solutiontile_at(mineboard, Coordinate(x, y)) ) ).toMap
   )
+
 
 // * Creates MineBoard which represents the mine locations from GameInput at the start of game
 // * MineBoard is necessary for creating SolutionBoard 
@@ -106,6 +100,7 @@ def create_mineboard(mine_locations: Array[Array[Int]]): MineBoard =
     ysize = ylen,
     tile_map = range.map( (x, y) => ( Coordinate(x, y), mine_locations(x)(y) == 1 )).toMap
   )
+
 
 // * Creates the initial PlayerBoard at the start of a game
 //
@@ -158,6 +153,7 @@ def reveal(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coo
     case SolutionTile.Mine => reveal_all_mines(solutionboard, updated_board)
     case _ => updated_board
   }
+
 
 // * Reveals all Mines on PlayerBoard 
 //

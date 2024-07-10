@@ -12,12 +12,3 @@ def convert_input_coordinates (input_coordinates: List[InputCoordinate]): List[C
   input_coordinates.map(ic => convert_input_coordinate(ic))
 
 
-// * Prints boards in the matrix form (Array of Arrays)
-// ** You give
-// board : Array of Arrays of type T, where T can be Int for input board or String for Tile
-// ** You get
-// print out of the board  
-def print_helper[T](board: Array[Array[T]]): Unit = 
-    println(board.map(_.mkString("")).mkString("\n"))
-    println("\n")
-
