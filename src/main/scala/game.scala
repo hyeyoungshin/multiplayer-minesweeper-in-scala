@@ -36,17 +36,18 @@ case class GameState (val solution_board: SolutionBoard,
                       val status: GameStatus)
 
 
-//TODO: Use case class PlayerAction(val action: Action, val pos: Coordinate)
-enum PlayerAction:
-  case Reveal(pos: Coordinate)
-  case Flag(pos: Coordinate)
-  case Unflag(pos: Coordinate)
+case class PlayerAction(val action: Action, val pos: Coordinate)
 
-  def get_pos(): Coordinate  = this match {
-    case Reveal(pos) => pos
-    case Flag(pos) => pos
-    case Unflag(pos) => pos
-  }
+enum Action:
+  case Reveal
+  case Flag
+  case Unflag
+
+//   def get_pos(): Coordinate  = this match {
+//     case Reveal(pos) => pos
+//     case Flag(pos) => pos
+//     case Unflag(pos) => pos
+//   }
 
 
 def new_game(d: GameDifficulty): GameState = 
@@ -65,17 +66,17 @@ def game_over(state: GameState): Boolean =
   }
 
 
-def play(state: GameState, player_action: PlayerAction, pos: Coordinate): GameState = 
+def play(state: GameState, player_action: PlayerAction): GameState = 
   state.status match {
       case GameStatus.Continue => {
-        val new_playerboard = player_action match {
-          case PlayerAction.Reveal(pos) => Some(reveal(state.solution_board, state.player_board, pos))
-          case PlayerAction.Flag(pos) => flag(state.player_board, pos)
-          case PlayerAction.Unflag(pos) => unflag(state.player_board, pos)
+        val new_playerboard = (player_action.action, player_action.pos) match {
+          case (Action.Reveal, pos) => Some(reveal(state.solution_board, state.player_board, pos))
+          case (Action.Flag, pos) => flag(state.player_board, pos)
+          case (Action.Unflag, pos) => unflag(state.player_board, pos)
         }
 
         new_playerboard match {
-          case Some(playerboard) => update_state(state, playerboard, pos)
+          case Some(playerboard) => update_state(state, playerboard, player_action.pos)
           case None => ??? // get_valid_input()
         }
       }
