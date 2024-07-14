@@ -1,19 +1,9 @@
 import scala.io.StdIn.readLine
 import java.awt.Color
 
-object ColorPrinter:
-  val Reset = "\u001b[0m"
-  val Red = "\u001b[31m"
-  val Blue = "\u001b[34m"
-  val Green = "\u001b[32m"
-
-  def print_in_color(text: String, color: String): Unit = {
-    println(s"$color$text$Reset")
-  }
-
-///////////////////////////////////////////////
-////////////////// Game Play //////////////////
-///////////////////////////////////////////////
+///////////////////////////////////////////////////////////////
+//////////// Text based Single Player Minesweeper /////////////
+///////////////////////////////////////////////////////////////
 @main def text_ui_game(): Unit = 
   print_start()
   val difficulty = get_valid_difficulty()
@@ -35,10 +25,10 @@ object ColorPrinter:
 ////////////////  
 def print_start(): Unit = 
   println("")
-  ColorPrinter.print_in_color("Welcome to the minesweeper game.\n", ColorPrinter.Blue)
-  ColorPrinter.print_in_color("Enter your name: ", ColorPrinter.Blue)
+  print_with_effect("Welcome to the minesweeper game.", PrinterEffects.Bold)
+  print_with_effect("Enter your name: ", PrinterEffects.Bold)
   val user_name = readLine()
-  ColorPrinter.print_in_color(s"Hello, $user_name!\n", ColorPrinter.Blue)
+  print_with_effect(s"Hello, $user_name!", PrinterEffects.Bold)
   println("")
 
 
@@ -61,9 +51,10 @@ def parse_difficulty(user_input: String): Either[String, GameDifficulty] =
 
 def print_difficulty(difficulty: GameDifficulty): Unit = 
   println("")
-  ColorPrinter.print_in_color(s"Starting a game with board size: (${difficulty.size._1} x ${difficulty.size._2}) " +
-    s"and Number of mines: ${difficulty.num_mines}", ColorPrinter.Blue)
+  print_with_effect(s"Starting a game with board size: (${difficulty.size._1} x ${difficulty.size._2}) " +
+    s"and Number of mines: ${difficulty.num_mines}", PrinterEffects.Bold)
   println("")
+  Thread.sleep(1000)
 
 
 
@@ -71,34 +62,43 @@ def print_difficulty(difficulty: GameDifficulty): Unit =
 // Game State //
 ////////////////
 def print_state(state: GameState): Unit = 
-  print_board(state.player_board)
+  print_board(state.game_board)
   print_status(state.status)
 
 def print_status(status: GameStatus): Unit = 
   status match {
-    case GameStatus.Win => println("You win!")
-    case GameStatus.Lose => println("You lost...")
+    case GameStatus.Win => print_with_effect("You win!", PrinterEffects.Bold)
+    case GameStatus.Lose => print_with_effect("You lost...", PrinterEffects.Bold)
     case GameStatus.Continue => ()
   }
 
 
 
-//////////////////////
-// Input Coordinate //
-//////////////////////
+//////////////////////////////
+// Parse and Validate Input //
+//////////////////////////////
 
-def get_valid_input[T](message: String, parse_and_validate: String => Either[String, T])
-: T = 
-  def helper(): T = 
-    ColorPrinter.print_in_color(message, ColorPrinter.Blue)
+/* Used to parse and validate user input for T which is one of
+ - GameDifficulty   
+ - Coordinate
+ - PlayerAction
+*/
+def get_valid_input[T](message: String, parse_and_validate: String => Either[String, T]): T = 
+  def loop(): T = 
+    print_with_effect(message, PrinterEffects.Bold)
     val player_input = readLine()
     parse_and_validate(player_input) match {
       case Right(value) => value
-      case Left(msg) => ColorPrinter.print_in_color(msg, ColorPrinter.Red); helper()
+      case Left(msg) => print_with_effect(msg, PrinterEffects.Red); loop()
     }
   
-  helper()
+  loop()
 
+
+
+////////////////
+// Coordinate //
+////////////////
 
 def get_valid_coordinate(state: GameState) = 
   get_valid_input(message = "Enter a tile position:",
@@ -116,6 +116,7 @@ def parse_coordinate(user_input: String): Either[String, Coordinate] =
     case None => Left("The tile pos is in wrong format.")
   }
 
+
 /* handle cases where user type non numeric coordinates */
 def parse_coordinate_helper(user_input: String): Option[Array[Int]] = 
   try {
@@ -124,13 +125,14 @@ def parse_coordinate_helper(user_input: String): Option[Array[Int]] =
     case _: NumberFormatException => None
   }
 
+
 /* check user input coordinate is valid
 user input coordinate is valid when it is within board boundary AND
 the tile at input coordinate is not revealed
  */
 def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coordinate] = 
-  if state.player_board.within_boundary(tile_pos) then
-    state.player_board.tile_map(tile_pos) match {
+  if state.game_board.board.within_boundary(tile_pos) then
+    state.game_board.board.tile_map(tile_pos) match {
       case PlayerTile.Revealed(_) => Left("The tile is alreay revealed.")
       case _ => Right(tile_pos)
     }
@@ -157,26 +159,26 @@ def parse_action(input: String, pos: Coordinate): Either[String, PlayerAction] =
 
 
 def valid_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = 
-  val playertile = state.player_board.tile_map(player_action.pos)
+  val playertile = state.game_board.board.tile_map(player_action.pos)
 
   player_action.action match {
     case Action.Flag => {
       if playertile == PlayerTile.Hidden then 
         Right(player_action) 
       else 
-        Left("You cannot flag a tile that's already revealed or flagged.\n")
+        Left("You cannot flag a tile that's already revealed or flagged.")
       }
     case Action.Reveal => {
       if playertile == PlayerTile.Hidden then 
         Right(player_action) 
       else 
-        Left("You cannot reveal a tile that's already revealed or flagged.\n")
+        Left("You cannot reveal a tile that's already revealed or flagged.")
       }
     case Action.Unflag => {
       if playertile == PlayerTile.Flagged then 
         Right(player_action) 
       else 
-        Left("You cannot unflag a tile that's not flagged.\n")
+        Left("You cannot unflag a tile that's not flagged.")
     }
   }
 
@@ -185,18 +187,29 @@ def valid_action(state: GameState, player_action: PlayerAction): Either[String, 
 //////////////
 // Printers //
 //////////////
+object PrinterEffects:
+  val Red = "\u001b[31m"
+  val Bold = "\u001b[1m"
+  val Reset = "\u001b[0m"
 
-// Clear the screen and move the cursor to the top-left corner
+
+def print_with_effect(text: String, effect: String): Unit = {
+  println(s"$effect$text${PrinterEffects.Reset}")
+}
+
+
 def print_inplace(): Unit = 
+  // Clears the screen
   print("\u001b[2J")
+  // Moves the cursor to the top-left corner
   print("\u001b[H")
 
 
-// TODO: Print board underneath board size and number of mines info
-def print_board[T](board: Board[T]): Unit = 
+def print_board(game_board: GameBoard): Unit = 
   print_inplace()
-  val str_board = Array.fill(board.xsize)(Array.fill(board.ysize)(""))
-  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
+  print_with_effect(s"Number of Mines: ${game_board.num_mines}", PrinterEffects.Bold)
+  val str_board = Array.fill(game_board.board.xsize)(Array.fill(game_board.board.ysize)(""))
+  game_board.board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
   print_helper[String](str_board)
 
 
@@ -206,8 +219,8 @@ def print_board[T](board: Board[T]): Unit =
 // ** You get
 // print out of the board  
 def print_helper[T](board: Array[Array[T]]): Unit = 
-    println(board.map(_.mkString("")).mkString("\n"))
-    println("\n")
+  println(board.map(_.mkString("")).mkString("\n"))
+  println("")
 
 
 // Rust style Result type

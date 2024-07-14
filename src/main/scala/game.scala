@@ -13,8 +13,9 @@
 //     case Intermediate => 4
 //     case Hard => 9
 
+case class GameBoard(val board: PlayerBoard, val num_mines: Int)
 
-case class Player(val name: String, val board: PlayerBoard, val tries: Int)
+case class GamePlayer(val name: String, val board: PlayerBoard, val tries: Int)
 
 
 case class GameDifficulty(val size: (Int, Int), val num_mines: Int)
@@ -32,8 +33,12 @@ enum GameStatus:
 
 
 case class GameState (val solution_board: SolutionBoard, 
-                      val player_board: PlayerBoard, 
+                      val game_board: GameBoard, 
                       val status: GameStatus)
+                      
+// case class GameState (val solution_board: SolutionBoard, 
+// val player_board: PlayerBoard, 
+// val status: GameStatus)
 
 
 case class PlayerAction(val action: Action, val pos: Coordinate)
@@ -49,13 +54,12 @@ enum Action:
 //     case Unflag(pos) => pos
 //   }
 
-
 def new_game(d: GameDifficulty): GameState = 
   val mine_board = generate_mine_locations(d)
   val solution_board = create_solutionboard(mine_board)
   val initial_board = create_playerboard(mine_board.xsize, mine_board.ysize)
   
-  GameState(solution_board, initial_board, GameStatus.Continue)
+  GameState(solution_board, GameBoard(initial_board, d.num_mines), GameStatus.Continue)
 
 
 def game_over(state: GameState): Boolean = 
@@ -69,14 +73,14 @@ def game_over(state: GameState): Boolean =
 def play(state: GameState, player_action: PlayerAction): GameState = 
   state.status match {
       case GameStatus.Continue => {
-        val new_playerboard = (player_action.action, player_action.pos) match {
-          case (Action.Reveal, pos) => Some(reveal(state.solution_board, state.player_board, pos))
-          case (Action.Flag, pos) => flag(state.player_board, pos)
-          case (Action.Unflag, pos) => unflag(state.player_board, pos)
+        val new_player_board = (player_action.action, player_action.pos) match {
+          case (Action.Reveal, pos) => Some(reveal(state.solution_board, state.game_board.board, pos))
+          case (Action.Flag, pos) => flag(state.game_board.board, pos)
+          case (Action.Unflag, pos) => unflag(state.game_board.board, pos)
         }
 
-        new_playerboard match {
-          case Some(playerboard) => update_state(state, playerboard, player_action.pos)
+        new_player_board match {
+          case Some(playerboard) => update_state(state, GameBoard(playerboard, state.game_board.num_mines), player_action.pos)
           case None => ??? // get_valid_input()
         }
       }
@@ -96,12 +100,12 @@ def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean =
   num_hidden == num_mines && num_flagged == 0
 
 
-def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = 
+def update_state(state: GameState, game_board: GameBoard, tile_pos: Coordinate): GameState = 
   val new_status = 
-    if has_won(state.solution_board, new_player_board) then
+    if has_won(state.solution_board, game_board.board) then
       GameStatus.Win
     else
-      new_player_board.tile_map(tile_pos) match {
+      game_board.board.tile_map(tile_pos) match {
         case PlayerTile.Revealed(SolutionTile.Mine) => GameStatus.Lose
         case PlayerTile.Revealed(SolutionTile.Empty) => GameStatus.Continue
         case PlayerTile.Revealed(SolutionTile.Hint(_)) => GameStatus.Continue
@@ -109,7 +113,7 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
         case PlayerTile.Hidden => GameStatus.Continue
       }
     
-  GameState(state.solution_board, new_player_board, new_status)
+  GameState(state.solution_board, game_board, new_status)
 
 
 // KEEP IN MIND:
