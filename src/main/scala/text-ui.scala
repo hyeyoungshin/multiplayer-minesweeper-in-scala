@@ -6,11 +6,18 @@ import java.awt.Color
 ///////////////////////////////////////////////////////////////
 @main def text_ui_game(): Unit = 
   print_start()
+
+  val mode = get_valid_mode()
+  print_mode(mode)
+  
   val difficulty = get_valid_difficulty()
   print_difficulty(difficulty)
 
   var state = new_game(difficulty)
   print_state(state)
+  
+  val player1 = Player("1", state.game_board.player_board, 0)
+  val player2 = Player("2", state.game_board.player_board, 0)
 
   while !game_over(state) do 
     val coordinate = get_valid_coordinate(state)
@@ -26,11 +33,26 @@ import java.awt.Color
 def print_start(): Unit = 
   println("")
   print_with_effect("Welcome to the minesweeper game.", PrinterEffects.Bold)
-  print_with_effect("Enter your name: ", PrinterEffects.Bold)
-  val user_name = readLine()
-  print_with_effect(s"Hello, $user_name!", PrinterEffects.Bold)
-  println("")
+  
+  
 
+def get_valid_mode(): GameMode = 
+  get_valid_input("Choose mode: (Single, Multi)", parse_mode)
+
+
+def parse_mode(user_input: String): Either[String, GameMode] = 
+  user_input match {
+    case "Single" => Right(GameMode.Single)
+    case "Multi" => Right(GameMode.Multi(2))
+    case _ => Left("Enter Single or Multi only.")
+  }
+  
+def print_mode(mode: GameMode): Unit =  
+  mode match {
+    case GameMode.Single => print_with_effect("Enter your name: ", PrinterEffects.Bold)
+    case GameMode.Multi(_) =>  print_with_effect("Enter players names separated by commas: ", PrinterEffects.Bold)
+  }
+  
 
 
 /////////////////////
@@ -54,7 +76,7 @@ def print_difficulty(difficulty: GameDifficulty): Unit =
   print_with_effect(s"Starting a game with board size: (${difficulty.size._1} x ${difficulty.size._2}) " +
     s"and Number of mines: ${difficulty.num_mines}", PrinterEffects.Bold)
   println("")
-  Thread.sleep(1000)
+  Thread.sleep(1500)
 
 
 
@@ -131,8 +153,8 @@ user input coordinate is valid when it is within board boundary AND
 the tile at input coordinate is not revealed
  */
 def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coordinate] = 
-  if state.game_board.board.within_boundary(tile_pos) then
-    state.game_board.board.tile_map(tile_pos) match {
+  if state.game_board.player_board.within_boundary(tile_pos) then
+    state.game_board.player_board.tile_map(tile_pos) match {
       case PlayerTile.Revealed(_) => Left("The tile is alreay revealed.")
       case _ => Right(tile_pos)
     }
@@ -159,7 +181,7 @@ def parse_action(input: String, pos: Coordinate): Either[String, PlayerAction] =
 
 
 def valid_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = 
-  val playertile = state.game_board.board.tile_map(player_action.pos)
+  val playertile = state.game_board.player_board.tile_map(player_action.pos)
 
   player_action.action match {
     case Action.Flag => {
@@ -208,8 +230,8 @@ def print_inplace(): Unit =
 def print_board(game_board: GameBoard): Unit = 
   print_inplace()
   print_with_effect(s"Number of Mines: ${game_board.num_mines}", PrinterEffects.Bold)
-  val str_board = Array.fill(game_board.board.xsize)(Array.fill(game_board.board.ysize)(""))
-  game_board.board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
+  val str_board = Array.fill(game_board.player_board.xsize)(Array.fill(game_board.player_board.ysize)(""))
+  game_board.player_board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
   print_helper[String](str_board)
 
 

@@ -1,65 +1,47 @@
-// enum GameDifficulty:
-//   case Easy 
-//   case Intermediate
-//   case Hard
+////////////////////////////
+///// Data types: Game /////
+////////////////////////////
+case class GameState (val solution_board: SolutionBoard, 
+                      val game_board: GameBoard, 
+                      val status: GameStatus)
 
-//   def get_size(): (Int, Int) = this match
-//     case Easy => (3, 3)
-//     case Intermediate => (5, 5)
-//     case Hard => (7, 7)
+enum GameStatus:
+  case Win 
+  case Lose 
+  case Continue(next: Player)
 
-//   def get_num_mines(): Int = this match
-//     case Easy => 2
-//     case Intermediate => 4
-//     case Hard => 9
-
-case class GameBoard(val board: PlayerBoard, val num_mines: Int)
-
-case class GamePlayer(val name: String, val board: PlayerBoard, val tries: Int)
-
+enum GameMode:
+  case Single
+  case Multi(how_many: Int)
 
 case class GameDifficulty(val size: (Int, Int), val num_mines: Int)
-
-
 final val Easy = GameDifficulty((3, 3), 2)
 final val Medium = GameDifficulty((5, 5), 4)
 final val Hard = GameDifficulty((7, 7), 9)
 
+case class GameBoard(val player_board: PlayerBoard, val num_mines: Int)
 
-enum GameStatus:
-  case Win
-  case Lose
-  case Continue
+//////////////////////////////
+///// Data types: Player /////
+//////////////////////////////
 
-
-case class GameState (val solution_board: SolutionBoard, 
-                      val game_board: GameBoard, 
-                      val status: GameStatus)
-                      
-// case class GameState (val solution_board: SolutionBoard, 
-// val player_board: PlayerBoard, 
-// val status: GameStatus)
-
+case class Player(val name: String, val board: PlayerBoard, val num_flags: Int)
 
 case class PlayerAction(val action: Action, val pos: Coordinate)
 
 enum Action:
-  case Reveal
-  case Flag
-  case Unflag
+  case Reveal, Flag, Unflag
 
-//   def get_pos(): Coordinate  = this match {
-//     case Reveal(pos) => pos
-//     case Flag(pos) => pos
-//     case Unflag(pos) => pos
-//   }
 
-def new_game(d: GameDifficulty): GameState = 
-  val mine_board = generate_mine_locations(d)
+//////////////////////////////
+///////// Game Logic /////////
+//////////////////////////////
+def new_game(difficulty: GameDifficulty): GameState = 
+  val mine_board = generate_mine_locations(difficulty)
   val solution_board = create_solutionboard(mine_board)
   val initial_board = create_playerboard(mine_board.xsize, mine_board.ysize)
   
-  GameState(solution_board, GameBoard(initial_board, d.num_mines), GameStatus.Continue)
+  GameState(solution_board, GameBoard(initial_board, difficulty.num_mines), GameStatus.Continue(Player("", initial_board, 0)))
 
 
 def game_over(state: GameState): Boolean = 
@@ -74,9 +56,9 @@ def play(state: GameState, player_action: PlayerAction): GameState =
   state.status match {
       case GameStatus.Continue => {
         val new_player_board = (player_action.action, player_action.pos) match {
-          case (Action.Reveal, pos) => Some(reveal(state.solution_board, state.game_board.board, pos))
-          case (Action.Flag, pos) => flag(state.game_board.board, pos)
-          case (Action.Unflag, pos) => unflag(state.game_board.board, pos)
+          case (Action.Reveal, pos) => Some(reveal(state.solution_board, state.game_board.player_board, pos))
+          case (Action.Flag, pos) => flag(state.game_board.player_board, pos)
+          case (Action.Unflag, pos) => unflag(state.game_board.player_board, pos)
         }
 
         new_player_board match {
@@ -102,15 +84,15 @@ def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean =
 
 def update_state(state: GameState, game_board: GameBoard, tile_pos: Coordinate): GameState = 
   val new_status = 
-    if has_won(state.solution_board, game_board.board) then
+    if has_won(state.solution_board, game_board.player_board) then
       GameStatus.Win
     else
-      game_board.board.tile_map(tile_pos) match {
+      game_board.player_board.tile_map(tile_pos) match {
         case PlayerTile.Revealed(SolutionTile.Mine) => GameStatus.Lose
-        case PlayerTile.Revealed(SolutionTile.Empty) => GameStatus.Continue
-        case PlayerTile.Revealed(SolutionTile.Hint(_)) => GameStatus.Continue
-        case PlayerTile.Flagged => GameStatus.Continue
-        case PlayerTile.Hidden => GameStatus.Continue
+        case PlayerTile.Revealed(SolutionTile.Empty) => GameStatus.Continue(Player("dummy", game_board.player_board, 0))
+        case PlayerTile.Revealed(SolutionTile.Hint(_)) => GameStatus.Continue(Player("dummy", game_board.player_board, 0))
+        case PlayerTile.Flagged => GameStatus.Continue(Player("dummy", game_board.player_board, 0))
+        case PlayerTile.Hidden => GameStatus.Continue(Player("dummy", game_board.player_board, 0))
       }
     
   GameState(state.solution_board, game_board, new_status)
