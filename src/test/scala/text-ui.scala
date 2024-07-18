@@ -1,11 +1,12 @@
 import org.scalatest.funsuite.AnyFunSuite
 
 class TextUI extends AnyFunSuite {
-  var state = new_game()
+  var state = new_game(Easy)
 
   test("player action") {
-    val next_state = play(state, PlayerAction.Reveal(Coordinate(1, 1)))
-    assert(next_state.player_board.tile_map(Coordinate(1,1)) != PlayerTile.Hidden)
+    val new_state = play(state, PlayerAction(Action.Reveal, Coordinate(1, 1)))
+    val current_player = new_state.player_pool.current()
+    assert(current_player.board.tile_map(Coordinate(1, 1)) != PlayerTile.Hidden)
   }
 
 }
