@@ -1,58 +1,37 @@
 import scala.io.StdIn.readLine
 import java.awt.Color
+import upickle.implicits.Readers
 
 ///////////////////////////////////////////////////////////////
 //////////// Text based Single Player Minesweeper /////////////
 ///////////////////////////////////////////////////////////////
 @main def text_ui_game(): Unit = 
   print_start()
-
-  val mode = get_valid_mode()
-  print_mode(mode)
   
   val difficulty = get_valid_difficulty()
   print_difficulty(difficulty)
 
   var state = new_game(difficulty)
   print_state(state)
-  
-  val player1 = Player("1", state.game_board.player_board, 0)
-  val player2 = Player("2", state.game_board.player_board, 0)
 
   while !game_over(state) do 
+    print_state(state)
     val coordinate = get_valid_coordinate(state)
     val player_action = get_valid_action(state)(coordinate)
     state = play(state, player_action)
     print_state(state)
+    state = next_player(state)
+    
 
 
 
-////////////////
-// Game Start //
-////////////////  
+//////////////////////////////////
+////// Game Start and Setup //////
+//////////////////////////////////  
 def print_start(): Unit = 
   println("")
   print_with_effect("Welcome to the minesweeper game.", PrinterEffects.Bold)
-  
-  
 
-def get_valid_mode(): GameMode = 
-  get_valid_input("Choose mode: (Single, Multi)", parse_mode)
-
-
-def parse_mode(user_input: String): Either[String, GameMode] = 
-  user_input match {
-    case "Single" => Right(GameMode.Single)
-    case "Multi" => Right(GameMode.Multi(2))
-    case _ => Left("Enter Single or Multi only.")
-  }
-  
-def print_mode(mode: GameMode): Unit =  
-  mode match {
-    case GameMode.Single => print_with_effect("Enter your name: ", PrinterEffects.Bold)
-    case GameMode.Multi(_) =>  print_with_effect("Enter players names separated by commas: ", PrinterEffects.Bold)
-  }
-  
 
 
 /////////////////////
@@ -77,22 +56,6 @@ def print_difficulty(difficulty: GameDifficulty): Unit =
     s"and Number of mines: ${difficulty.num_mines}", PrinterEffects.Bold)
   println("")
   Thread.sleep(1500)
-
-
-
-////////////////
-// Game State //
-////////////////
-def print_state(state: GameState): Unit = 
-  print_board(state.game_board)
-  print_status(state.status)
-
-def print_status(status: GameStatus): Unit = 
-  status match {
-    case GameStatus.Win => print_with_effect("You win!", PrinterEffects.Bold)
-    case GameStatus.Lose => print_with_effect("You lost...", PrinterEffects.Bold)
-    case GameStatus.Continue => ()
-  }
 
 
 
@@ -123,9 +86,10 @@ def get_valid_input[T](message: String, parse_and_validate: String => Either[Str
 ////////////////
 
 def get_valid_coordinate(state: GameState) = 
-  get_valid_input(message = "Enter a tile position:",
+  val current_player = state.player_pool.current()
+  get_valid_input(message = s"${current_player.name}, Enter a tile position:",
                   parse_and_validate = input => parse_coordinate(input).flatMap(x => valid_coordinate(state, x)))
-
+    
 
 /* parse user input via int array
 for example, 1,1 is [1,1]
@@ -153,8 +117,9 @@ user input coordinate is valid when it is within board boundary AND
 the tile at input coordinate is not revealed
  */
 def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coordinate] = 
-  if state.game_board.player_board.within_boundary(tile_pos) then
-    state.game_board.player_board.tile_map(tile_pos) match {
+  val current_player = state.player_pool.current()
+  if current_player.board.within_boundary(tile_pos) then
+    current_player.board.tile_map(tile_pos) match {
       case PlayerTile.Revealed(_) => Left("The tile is alreay revealed.")
       case _ => Right(tile_pos)
     }
@@ -181,23 +146,23 @@ def parse_action(input: String, pos: Coordinate): Either[String, PlayerAction] =
 
 
 def valid_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = 
-  val playertile = state.game_board.player_board.tile_map(player_action.pos)
+  val tile_type = state.player_pool.current().board.tile_map(player_action.pos)
 
   player_action.action match {
     case Action.Flag => {
-      if playertile == PlayerTile.Hidden then 
+      if tile_type == PlayerTile.Hidden then 
         Right(player_action) 
       else 
         Left("You cannot flag a tile that's already revealed or flagged.")
       }
     case Action.Reveal => {
-      if playertile == PlayerTile.Hidden then 
+      if tile_type == PlayerTile.Hidden then 
         Right(player_action) 
       else 
         Left("You cannot reveal a tile that's already revealed or flagged.")
       }
     case Action.Unflag => {
-      if playertile == PlayerTile.Flagged then 
+      if tile_type == PlayerTile.Flagged then 
         Right(player_action) 
       else 
         Left("You cannot unflag a tile that's not flagged.")
@@ -227,11 +192,9 @@ def print_inplace(): Unit =
   print("\u001b[H")
 
 
-def print_board(game_board: GameBoard): Unit = 
-  print_inplace()
-  print_with_effect(s"Number of Mines: ${game_board.num_mines}", PrinterEffects.Bold)
-  val str_board = Array.fill(game_board.player_board.xsize)(Array.fill(game_board.player_board.ysize)(""))
-  game_board.player_board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
+def print_board(board: PlayerBoard): Unit = 
+  val str_board = Array.fill(board.xsize)(Array.fill(board.ysize)(""))
+  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
   print_helper[String](str_board)
 
 
@@ -243,6 +206,22 @@ def print_board(game_board: GameBoard): Unit =
 def print_helper[T](board: Array[Array[T]]): Unit = 
   println(board.map(_.mkString("")).mkString("\n"))
   println("")
+
+
+def print_state(state: GameState): Unit = 
+  print_inplace()
+  val current_player = state.player_pool.current().name
+  print_with_effect(s"Board: ${current_player}", PrinterEffects.Bold)
+  print_with_effect(s"Number of Mines: ${state.solution.num_mines}", PrinterEffects.Bold)
+
+  print_board(state.player_pool.current().board)
+  Thread.sleep(500)
+
+  state.status match {
+    case GameStatus.Win => print_with_effect(s"${current_player} win!", PrinterEffects.Bold)
+    case GameStatus.Lose => print_with_effect(s"${current_player} lost...", PrinterEffects.Bold)
+    case GameStatus.Continue => ()
+  }
 
 
 // Rust style Result type
