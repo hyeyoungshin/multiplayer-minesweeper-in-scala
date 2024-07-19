@@ -76,24 +76,34 @@ def play(state: GameState, player_action: PlayerAction): GameState =
   state.status match {
     // play is only valid in Continue status
     case GameStatus.Continue => {
-      val new_player_board = (player_action.action, player_action.pos) match {
-        case (Action.Reveal, pos) => Some(reveal(state.solution.board, current_player.board, pos))
-        case (Action.Flag, pos) => flag(current_player.board, pos)
-        case (Action.Unflag, pos) => unflag(current_player.board, pos)
+      // val new_player_board = (player_action.action, player_action.pos) match {
+      //   case (Action.Reveal, pos) => reveal(state.solution.board, current_player.board, pos)
+      //   case (Action.Flag, pos) => update_all(state.player_pool, pos, flag).current().board // TODO: playerpool not getting updated
+      //   case (Action.Unflag, pos) => update_all(state.player_pool, pos, unflag).current().board
+      // }
+      // update_state(state, new_player_board, player_action.pos)
+      val new_player_pool = (player_action.action, player_action.pos) match {
+        case (Action.Reveal, pos) => update_player(state, reveal(state.solution.board, current_player.board, pos))
+        case (Action.Flag, pos) => update_player_pool(state.player_pool, pos, flag)
+        case (Action.Unflag, pos) => update_player_pool(state.player_pool, pos, unflag)
       }
-
-      new_player_board match {
-        case Some(player_board) => update_state(state, player_board, player_action.pos)
-        case None => ??? // get_valid_input()
-      }
+      update_state(state, new_player_pool, player_action.pos)
     }
+
     case _ => throw IllegalStateException("You can only play game in Continue Status.")
   }
 
+def update_player_pool(player_pool: PlayerPool, pos: Coordinate, action: (PlayerBoard, Coordinate) => Option[PlayerBoard])
+: PlayerPool = 
+  val updated_players = player_pool.players.map(player => action(player.board, pos) match {
+    case Some(new_player_board) => Player(player.name, new_player_board)
+    case None => Player(player.name, player.board) // tile at pos was already revealed or flagged
+  })
 
-def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coordinate): GameState = {
-  // update player in the pool with new player board
-  val player_pool_with_updated_player = update_player(state, new_player_board)
+  PlayerPool(players = updated_players, next = player_pool.next)
+
+def update_state(state: GameState, new_player_pool: PlayerPool, tile_pos: Coordinate): GameState = {
+  val new_player_board = new_player_pool.current().board
   // update status
   val new_status = 
     if has_won(state.solution.board, new_player_board) then
@@ -108,7 +118,7 @@ def update_state(state: GameState, new_player_board: PlayerBoard, tile_pos: Coor
         case PlayerTile.Hidden => GameStatus.Continue
       }
     
-  GameState(state.solution, player_pool_with_updated_player, new_status)
+  GameState(state.solution, new_player_pool, new_status)
 }
 
 
