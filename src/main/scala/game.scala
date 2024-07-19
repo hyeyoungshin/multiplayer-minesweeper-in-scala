@@ -85,7 +85,7 @@ def play(state: GameState, player_action: PlayerAction): GameState =
       val new_player_pool = (player_action.action, player_action.pos) match {
         case (Action.Reveal, pos) => update_player(state, reveal(state.solution.board, current_player.board, pos))
         case (Action.Flag, pos) => update_player_pool(state.player_pool, pos, flag)
-        case (Action.Unflag, pos) => update_player_pool(state.player_pool, pos, unflag)
+        case (Action.Unflag, pos) => update_player_pool(state.player_pool, pos, unflag) // TODO: allow unflag only their own flags
       }
       update_state(state, new_player_pool, player_action.pos)
     }
