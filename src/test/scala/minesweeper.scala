@@ -67,23 +67,23 @@ class Minesweeper extends AnyFunSuite {
   }
 
   test("reveal-one-tile") {
-    val test = reveal(solutionboard_3x3, playerboard_3x3, test_pos)
+    val test = reveal(solutionboard_3x3)(playerboard_3x3, test_pos)
 
     assert(test.tile_map(Coordinate(1, 2)) == PlayerTile.Revealed(SolutionTile.Hint(2)))
   }
 
   test("reveal-more-tiles-if-empty") {
-    val test = reveal(solutionboard_3x3, playerboard_3x3, Coordinate(1, 0))
+    val test = reveal(solutionboard_3x3)(playerboard_3x3, Coordinate(1, 0))
 
     assert(test.tile_map(Coordinate(0, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
     assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
   }
 
   test("reveal-all-mines-if-hit-mine") {
-    val test = reveal(solutionboard_3x3, playerboard_3x3, Coordinate(0, 2))
+    val test = reveal(solutionboard_3x3)(playerboard_3x3, Coordinate(0, 2))
 
     assert(test.tile_map(Coordinate(0, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
-    assert(test.tile_map(Coordinate(2, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
+    assert(test.tile_map(Coordinate(2, 2)) == PlayerTile.Revealed (SolutionTile.Mine))
   }
 
   test("convert_input_coordinates") {
