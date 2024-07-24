@@ -51,7 +51,7 @@ def new_game(difficulty: GameDifficulty): GameState =
             status = GameStatus.Continue)
             
 
-
+// TODO: use map and range or list comprehension
 def initialize_players(num_players: Int, player_board: PlayerBoard): PlayerPool = 
   def loop(counter: Int, acc: List[Player]): List[Player] = 
     if counter == 0 then
@@ -78,11 +78,11 @@ def play(state: GameState, player_action: PlayerAction): GameState =
     // play is only valid in GameStatus.Continue
     case GameStatus.Continue => {
       val updated_player_pool = (player_action.action, player_action.pos) match {
-        case (Action.Reveal, pos) => update_player(state.player_pool, pos, reveal(state.solution.board))
-        case (Action.Flag, pos) => update_player_pool(state.player_pool, pos, flag(current_player))
+        case (Action.Reveal, pos) => update_player(state.player_pool, reveal(state.solution.board, pos))
+        case (Action.Flag, pos) => update_player_pool(state.player_pool, flag(current_player, pos))
           // {val updated_players = state.player_pool.players.map(player => update_player(state, pos, flag(current_player)))
           // updated_players.foldRight(state.player_pool)((player, pool) => update_player_pool(pool, player))}
-        case (Action.Unflag, pos) => update_player_pool(state.player_pool, pos, unflag(current_player))
+        case (Action.Unflag, pos) => update_player_pool(state.player_pool, unflag(current_player, pos))
       }
       
       update_state(state, updated_player_pool, player_action.pos)
@@ -92,20 +92,20 @@ def play(state: GameState, player_action: PlayerAction): GameState =
   }
 
 // update player with new player board in the current* pool
-def update_player(player_pool: PlayerPool, pos: Coordinate, update: (PlayerBoard, Coordinate) => PlayerBoard): PlayerPool = {
+def update_player(player_pool: PlayerPool, update: PlayerBoard => PlayerBoard): PlayerPool = {
   val original_player_list = player_pool.players
   val current = player_pool.next
   val current_player = original_player_list(current)
   
-  PlayerPool(original_player_list.updated(current, Player(current_player.id, update(current_player.board, pos))), current)
+  PlayerPool(original_player_list.updated(current, Player(current_player.id, update(current_player.board))), current)
 }
 
-
-def update_player_pool(player_pool: PlayerPool, pos: Coordinate, action: (PlayerBoard, Coordinate) => Option[PlayerBoard])
+// pos is not manipulated in the body, it's just passed along to action, so remove it
+def update_player_pool(player_pool: PlayerPool, update: PlayerBoard => Option[PlayerBoard])
 : PlayerPool = {
-  val updated_players = player_pool.players.map(player => action(player.board, pos) match {
+  val updated_players = player_pool.players.map(player => update(player.board) match {
     case Some(new_player_board) => Player(player.id, new_player_board)
-    case None => Player(player.id, player.board) // tile at pos was already revealed or flagged
+    case None => Player(player.id, player.board) // tile at pos was already revealed or flagged // TODO
   })
 
   PlayerPool(players = updated_players, next = player_pool.next)
@@ -153,9 +153,12 @@ def update_state(state: GameState, new_player_pool: PlayerPool, tile_pos: Coordi
 
 def next_player(state: GameState): GameState = {
   val current_pool = state.player_pool
+  //TODO: make it PlayerPool method
   val next_pool = PlayerPool(current_pool.players, (current_pool.next + 1) % current_pool.players.length)
   
-  GameState(state.solution, next_pool, state.status)
+  // GameState(state.solution, next_pool, state.status)
+  // copy makes it easy if additional fields are added later
+  state.copy(player_pool = next_pool)
 }
 
 

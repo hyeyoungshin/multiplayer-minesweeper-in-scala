@@ -18,7 +18,7 @@ enum SolutionTile:
   case Empty
   case Mine
   case Hint (hint: Int)
-
+  // TODO: move
   override def toString() = this match {
     case Empty => "[E]"
     case Mine => "[x]"
@@ -28,17 +28,26 @@ enum SolutionTile:
 
 // case Hidden (flagged: Boolean) allows winning condition to only consider
 // number of Hidden tiles 
-// otherwise, Flagged tiles need to be unflagged to win
+// otherwise, Flagged tiles need to be unflagged to 
+
+// TODO: case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[Player])
+// invalid state (Revealed and Flagged by the same player) is representable!
+
 enum PlayerTile:
   case Hidden
   case Revealed (tile: SolutionTile)
   case Flagged (by: Player)
 
+  //TODO: move it to text-ui
+  // is it fundamental to the data type?
+  // what if we implement GUI? This belongs to text-ui game.
   override def toString() = this match {
-    case Hidden => "[ ]"
-    case Revealed(t) => t.toString()
-    case Flagged(by) => "[F]" //TODO: maybe add colors to differentiate whose flags they are
+      case Hidden => "[ ]"
+      case Revealed(t) => t.toString()
+      case Flagged(by) => "[F]" //: maybe add colors to differentiate whose flags they are
   }
+  
+
 
 // * Represents tile positions on the boards
 //
@@ -148,7 +157,7 @@ def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, new_tile: Playe
 // tile_pos : tile position on playerboard to reveal (player click)
 // * You get
 // PlayerBoard with tile at tile_pos revealed
-def reveal(solutionboard: SolutionBoard)(playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = {
+def reveal(solutionboard: SolutionBoard, tile_pos: Coordinate)(playerboard: PlayerBoard): PlayerBoard = {
   // we don't check what type of tile is at tile_pos on the playerboard 
   // because we can assume it's PlayerTile.Hidden
   // other cases are filtered by player action validity check
@@ -188,7 +197,7 @@ def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, til
       if playerboard.tile_map(tile_pos) != PlayerTile.Hidden then
         acc
       else 
-        reveal(solutionboard)(acc, tile_pos)
+        reveal(solutionboard, tile_pos)(acc)
     }
   )
 }
@@ -203,9 +212,9 @@ def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, til
 /* update board by flagging player tile at `tile_pos` if the tile is hidden
 return `None` otherwise
 */
-def flag(by: Player)(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] = {
-  playerboard.tile_map(tile_pos) match {
-    case PlayerTile.Hidden => Some(update_board(playerboard, tile_pos, PlayerTile.Flagged(by)))
+def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
+  playerboard.tile_map(pos) match {
+    case PlayerTile.Hidden => Some(update_board(playerboard, pos, PlayerTile.Flagged(by)))
     case _ => None
   }
 }  
@@ -214,9 +223,9 @@ def flag(by: Player)(playerboard: PlayerBoard, tile_pos: Coordinate): Option[Pla
 /* update board by unflagging player tile at `tile_pos` if the tile is flagged
 return `None` otherwise
 */
-def unflag(who: Player)(playerboard: PlayerBoard, tile_pos: Coordinate): Option[PlayerBoard] = {
-  playerboard.tile_map(tile_pos) match {
-    case PlayerTile.Flagged(by) if by.id == who.id => Some(update_board(playerboard, tile_pos, PlayerTile.Hidden))
+def unflag(who: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
+  playerboard.tile_map(pos) match {
+    case PlayerTile.Flagged(by) if by.id == who.id => Some(update_board(playerboard, pos, PlayerTile.Hidden))
     case _ => None
   }
 }

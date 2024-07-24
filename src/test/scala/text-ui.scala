@@ -10,3 +10,8 @@ class TextUI extends AnyFunSuite {
   }
 
 }
+
+// should not win
+// [E][1][ ]
+// [E][2][ ] 
+// [E][2][F]

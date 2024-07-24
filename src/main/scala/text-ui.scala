@@ -54,8 +54,19 @@ def get_valid_input[T](message: String, parse_and_validate: String => Either[Str
   loop()
 }
 
+// 
+def get_valid_inputs(state: GameState): PlayerAction = {
+  def loop(): PlayerAction = 
+    val coordinate = get_valid_coordinate(state)
+    val action = get_valid_action()
+    valid_player_action(state, PlayerAction(action, coordinate)) match {
+      case Right(action) => action
+      case Left(msg) => print_with_effect(msg, PrinterEffects.Bold); loop()
+    }
 
-def get_valid_inputs(state: GameState): PlayerAction = get_valid_action(state)(get_valid_coordinate(state))
+  loop()
+}
+  // get_valid_action(state)(get_valid_coordinate(state))
 
 
 /////////////////////
@@ -137,40 +148,40 @@ def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coo
 ///////////////////
 // Player Action //
 ///////////////////
-def get_valid_action(state: GameState)(pos: Coordinate): PlayerAction = 
+def get_valid_action(): Action = 
   get_valid_input(message = "Enter an action: R for reveal, F for flag, U for unflag",
-                  parse_and_validate = input => parse_action(input, pos).flatMap(action => valid_action(state, action)))
+                  parse_and_validate = input => parse_action(input))
+                  
 
-
-def parse_action(input: String, pos: Coordinate): Either[String, PlayerAction] = 
+def parse_action(input: String): Either[String, Action] = 
   input match {
-    case "R" => Right(PlayerAction(Action.Reveal, pos))
-    case "F" => Right(PlayerAction(Action.Flag, pos))
-    case "U" => Right(PlayerAction(Action.Unflag, pos))
+    case "R" => Right(Action.Reveal)
+    case "F" => Right(Action.Flag)
+    case "U" => Right(Action.Unflag)
     case _ => Left("Please only enter R, F, or U: ")
   }
 
 
-def valid_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = 
+def valid_player_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = 
   val tile_type = state.player_pool.current().board.tile_map(player_action.pos)
 
   player_action.action match {
     case Action.Flag => tile_type match {
       case PlayerTile.Hidden => Right(player_action) 
-      case PlayerTile.Flagged(by) => println(s"The tile is already flagged by Player ${by.id}."); Right(get_valid_inputs(state))
-      case PlayerTile.Revealed(tile) => println(s"The tile is already revealed."); Right(get_valid_inputs(state))
+      case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
+      case PlayerTile.Revealed(tile) => Left(s"The tile is already revealed.")
     }
     
     case Action.Reveal => tile_type match {
       case PlayerTile.Hidden => Right(player_action) 
-      case PlayerTile.Flagged(by) => println(s"The tile is already flagged by Player ${by.id}."); Right(get_valid_inputs(state))
-      case PlayerTile.Revealed(_) => println(s"The tile is already revealed."); Right(get_valid_inputs(state))
+      case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
+      case PlayerTile.Revealed(_) => Left(s"The tile is already revealed.")
     }
     
     case Action.Unflag => {
       tile_type match {
         case PlayerTile.Flagged(by) if by.id == state.player_pool.current().id => Right(player_action)
-        case PlayerTile.Flagged(by) => println(s"The tile is already flagged by Player ${by.id}."); Right(get_valid_inputs(state))
+        case PlayerTile.Flagged(by) => Left(s"The tile is flagged by Player ${by.id}.")
         case _ => Left("You cannot unflag a tile that's not flagged.") 
       }
     }
