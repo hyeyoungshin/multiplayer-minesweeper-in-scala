@@ -18,12 +18,6 @@ enum SolutionTile:
   case Empty
   case Mine
   case Hint (hint: Int)
-  // TODO: move
-  override def toString() = this match {
-    case Empty => "[E]"
-    case Mine => "[x]"
-    case Hint(n) => s"[$n]"
-  }
 
 
 // case Hidden (flagged: Boolean) allows winning condition to only consider

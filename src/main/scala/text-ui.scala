@@ -210,9 +210,23 @@ def print_inplace(): Unit =
   print("\u001b[H")
 
 
+def print_player_tile(p_tile: PlayerTile) = p_tile match {
+  case PlayerTile.Hidden => "[ ]"
+  case PlayerTile.Revealed(t) => print_solution_tile(t)
+  case PlayerTile.Flagged(by) => "[F]" //TODO: maybe add colors to differentiate whose flags they are
+}
+
+
+def print_solution_tile(s_tile: SolutionTile) = s_tile match {
+  case SolutionTile.Empty => "[E]"
+  case SolutionTile.Mine => "[x]"
+  case SolutionTile.Hint(n) => s"[$n]"
+}
+
+
 def print_board(board: PlayerBoard): Unit = 
   val str_board = Array.fill(board.xsize)(Array.fill(board.ysize)(""))
-  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = tile.toString())
+  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = print_player_tile(tile))
   print_helper[String](str_board)
 
 
