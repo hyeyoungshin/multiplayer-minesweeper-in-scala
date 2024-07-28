@@ -18,29 +18,20 @@ enum SolutionTile:
   case Empty
   case Mine
   case Hint (hint: Int)
-
-
 // case Hidden (flagged: Boolean) allows winning condition to only consider
 // number of Hidden tiles 
 // otherwise, Flagged tiles need to be unflagged to 
 
-// TODO: case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[Player])
-// invalid state (Revealed and Flagged by the same player) is representable!
 
-enum PlayerTile:
-  case Hidden
-  case Revealed (tile: SolutionTile)
-  case Flagged (by: Player)
+// Up side: possible to represent a tile that's both revealed and flagged (by another player)
+// Down side: invalid state (Revealed and Flagged by the the same player) is representable!
+case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[PlayerID])
 
-  //TODO: move it to text-ui
-  // is it fundamental to the data type?
-  // what if we implement GUI? This belongs to text-ui game.
-  override def toString() = this match {
-      case Hidden => "[ ]"
-      case Revealed(t) => t.toString()
-      case Flagged(by) => "[F]" //: maybe add colors to differentiate whose flags they are
-  }
-  
+
+// enum PlayerTile:
+//   case Hidden
+//   case Revealed (tile: SolutionTile)
+//   case Flagged (by: Player)
 
 
 // * Represents tile positions on the boards
@@ -120,7 +111,7 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard = {
   Board(
     xsize = xlen,
     ysize = ylen,
-    tile_map = range.map( (x, y) => (Coordinate(x, y), PlayerTile.Hidden)).toMap
+    tile_map = range.map((x, y) => (Coordinate(x, y), PlayerTile(None, None))).toMap
   )
 }
 
@@ -132,14 +123,7 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard = {
 def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, new_tile: PlayerTile): PlayerBoard = {
   Board(xsize = playerboard.xsize, 
         ysize = playerboard.ysize, 
-        tile_map = playerboard.tile_map + (tile_pos -> new_tile))
-  
-  // TODO: remove comment
-  // playerboard.tile_map(tile_pos) match {
-  //   case PlayerTile.Revealed(tile) if (tile == new_tile) => None // not updated
-  //   case _ => Some(
-  // }
-  
+        tile_map = playerboard.tile_map + (tile_pos -> new_tile))  
 }
 
 
@@ -156,13 +140,32 @@ def reveal(solutionboard: SolutionBoard, tile_pos: Coordinate)(playerboard: Play
   // because we can assume it's PlayerTile.Hidden
   // other cases are filtered by player action validity check
   val solution_tile = solutionboard.tile_map(tile_pos)
-  val updated_board = update_board(playerboard, tile_pos, PlayerTile.Revealed(solution_tile))
+  val updated_board = playerboard.tile_map(tile_pos) match {
+    case PlayerTile(None, None) => update_board(playerboard, tile_pos, PlayerTile(Some(solution_tile), None))
+    case PlayerTile(None, by) => update_board(playerboard, tile_pos, PlayerTile(Some(solution_tile), by))
+    case _ => playerboard
+    
+  }
   
   solution_tile match {
     case SolutionTile.Empty => reveal_neighbors(solutionboard, updated_board, tile_pos)
     case SolutionTile.Mine => reveal_all_mines(solutionboard, updated_board)
     case SolutionTile.Hint(_) => updated_board // no further action required
   }
+}
+
+
+// Get neighboring tiles of tile_pos. Check what solutontiles corresponds to neighboring tiles
+// If SolutionTile.Empty reveal_neighbors with updated playerboard at tile_pos
+def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = {
+  val neighbors = neighbors_inbounds(solutionboard, tile_pos)
+
+  neighbors.foldLeft(playerboard)(
+    (acc, tile_pos) => playerboard.tile_map(tile_pos) match {
+      case PlayerTile(Some(_), _) => acc
+      case _ => reveal(solutionboard, tile_pos)(acc)
+    }
+  )
 }
 
 
@@ -177,50 +180,32 @@ def reveal(solutionboard: SolutionBoard, tile_pos: Coordinate)(playerboard: Play
 def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard = {
   val filtered_map = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
   
-  filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => update_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
+  filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => 
+    update_board(acc, tile_pos, PlayerTile(Some(SolutionTile.Mine), None)))
 }
 
 
-// Get neighboring tiles of tile_pos. Check what solutontiles corresponds to neighboring tiles
-// If SolutionTile.Empty reveal_neighbors with updated playerboard at tile_pos
-def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = {
-  val neighbors = neighbors_inbounds(solutionboard, tile_pos)
-
-  neighbors.foldLeft(playerboard)(
-    (acc, tile_pos) =>  {
-      if playerboard.tile_map(tile_pos) != PlayerTile.Hidden then
-        acc
-      else 
-        reveal(solutionboard, tile_pos)(acc)
-    }
-  )
-}
-
-
-// TODO: Remove this
-// def reveal_more(solutionboard: SolutionBoard, playerboard: PlayerBoard, loc: List[Coordinate]): PlayerBoard = {
-//   loc.foldLeft(playerboard)((acc, tile_pos) => reveal(solutionboard)(acc, tile_pos))
-// }
-
-
-/* update board by flagging player tile at `tile_pos` if the tile is hidden
-return `None` otherwise
+/* update board by flagging player tile at `tile_pos` if the tile is hidden and not flagged
+   otherwise return `None`
 */
 def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile.Hidden => Some(update_board(playerboard, pos, PlayerTile.Flagged(by)))
-    case _ => None
+    case PlayerTile(None, None) => Some(update_board(playerboard, pos, PlayerTile(None, Some(by.id))))
+    case _ => None // should not reach this case
   }
 }  
 
 
-/* update board by unflagging player tile at `tile_pos` if the tile is flagged
-return `None` otherwise
+/* update board by unflagging player tile at `tile_pos` if the tile is hidden and flagged by the player
+   otherwise return `None`
 */
-def unflag(who: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
+def unflag(player: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile.Flagged(by) if by.id == who.id => Some(update_board(playerboard, pos, PlayerTile.Hidden))
-    case _ => None
+    case PlayerTile(None, by) => by match {
+      case Some(by) if by == player.id => Some(update_board(playerboard, pos, PlayerTile(None, None)))
+      case _ => None // should not reach this case
+    }
+    case _ => None // should not reach this case
   }
 }
 

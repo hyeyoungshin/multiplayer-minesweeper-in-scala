@@ -103,7 +103,7 @@ def print_difficulty(difficulty: GameDifficulty): Unit = {
 def get_valid_coordinate(state: GameState): Coordinate = {
   val current_player = state.player_pool.current()
 
-  get_valid_input(message = s"Player ${current_player.id}, enter a tile position:",
+  get_valid_input(message = s"Player ${current_player.id.id}, enter a tile position:",
                   parse_and_validate = input => parse_coordinate(input).flatMap(x => valid_coordinate(state, x)))
 }
     
@@ -137,7 +137,7 @@ def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coo
   val current_player = state.player_pool.current()
   if current_player.board.within_boundary(tile_pos) then
     current_player.board.tile_map(tile_pos) match {
-      case PlayerTile.Revealed(_) => Left("The tile is alreay revealed.")
+      case PlayerTile(Some(s_tile), _) => Left("The tile is alreay revealed.")
       case _ => Right(tile_pos)
     }
   else 
@@ -162,30 +162,50 @@ def parse_action(input: String): Either[String, Action] =
   }
 
 
-def valid_player_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = 
-  val tile_type = state.player_pool.current().board.tile_map(player_action.pos)
+def valid_player_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = {
+  val current_player = state.player_pool.current()
+  val p_tile = current_player.board.tile_map(player_action.pos)
+  
 
   player_action.action match {
-    case Action.Flag => tile_type match {
-      case PlayerTile.Hidden => Right(player_action) 
-      case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
-      case PlayerTile.Revealed(tile) => Left(s"The tile is already revealed.")
+    case Action.Flag => p_tile match {
+      case PlayerTile(None, None) => Right(player_action) 
+      case PlayerTile(None, Some(player_id)) => Left(s"The tile is already flagged by Player ${player_id}.")
+      case PlayerTile(Some(tile), _) => Left(s"The tile is already revealed.")
+      
+      // case PlayerTile.Hidden => Right(player_action) 
+      // case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
+      // case PlayerTile.Revealed(tile) => Left(s"The tile is already revealed.")
     }
     
-    case Action.Reveal => tile_type match {
-      case PlayerTile.Hidden => Right(player_action) 
-      case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
-      case PlayerTile.Revealed(_) => Left(s"The tile is already revealed.")
+    case Action.Reveal => p_tile match {
+      case PlayerTile(None, None) => Right(player_action) 
+      case PlayerTile(None, Some(player_id)) => 
+        if player_id != current_player.id then 
+          Right(player_action) // you can reveal a tile flagged by another player
+        else
+          Left(s"The tile is already flagged by Player ${player_id}")
+      case PlayerTile(Some(tile), _) => Left(s"The tile is already revealed.")
+
+      // case PlayerTile.Hidden => Right(player_action) 
+      // case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
+      // case PlayerTile.Revealed(_) => Left(s"The tile is already revealed.")
     }
     
-    case Action.Unflag => {
-      tile_type match {
-        case PlayerTile.Flagged(by) if by.id == state.player_pool.current().id => Right(player_action)
-        case PlayerTile.Flagged(by) => Left(s"The tile is flagged by Player ${by.id}.")
+    case Action.Unflag => p_tile match {
+        case PlayerTile(None, Some(player_id)) =>  
+          if player_id == current_player.id then 
+            Right(player_action)
+          else
+            Left(s"The tile is flagged by Player ${player_id}.")
         case _ => Left("You cannot unflag a tile that's not flagged.") 
+
+        // case PlayerTile.Flagged(by) if by.id == state.player_pool.current().id => Right(player_action)
+        // case PlayerTile.Flagged(by) => Left(s"The tile is flagged by Player ${by.id}.")
+        // case _ => Left("You cannot unflag a tile that's not flagged.") 
       }
     }
-  }
+}
 
 
 
@@ -210,23 +230,24 @@ def print_inplace(): Unit =
   print("\u001b[H")
 
 
-def print_player_tile(p_tile: PlayerTile) = p_tile match {
-  case PlayerTile.Hidden => "[ ]"
-  case PlayerTile.Revealed(t) => print_solution_tile(t)
-  case PlayerTile.Flagged(by) => "[F]" //TODO: maybe add colors to differentiate whose flags they are
+def player_tile_to_string(p_tile: PlayerTile): String = p_tile match {
+  case PlayerTile(None, None) => "[ ]"
+  case PlayerTile(None, Some(player_id)) => "[F]" //TODO: add color by player
+  case PlayerTile(Some(s_tile), _) => solution_tile_to_string(s_tile)
 }
 
 
-def print_solution_tile(s_tile: SolutionTile) = s_tile match {
+def solution_tile_to_string(s_tile: SolutionTile): String = s_tile match {
   case SolutionTile.Empty => "[E]"
   case SolutionTile.Mine => "[x]"
   case SolutionTile.Hint(n) => s"[$n]"
+
 }
 
 
 def print_board(board: PlayerBoard): Unit = 
   val str_board = Array.fill(board.xsize)(Array.fill(board.ysize)(""))
-  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = print_player_tile(tile))
+  board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = player_tile_to_string(tile))
   print_helper[String](str_board)
 
 
@@ -243,15 +264,15 @@ def print_helper[T](board: Array[Array[T]]): Unit =
 def print_state(state: GameState): Unit = 
   print_inplace()
   val current_player = state.player_pool.current()
-  print_with_effect(s"Board: Player ${current_player.id}", PrinterEffects.Bold)
+  print_with_effect(s"Board: Player ${current_player.id.id}", PrinterEffects.Bold)
   print_with_effect(s"Number of Mines: ${state.solution.num_mines}", PrinterEffects.Bold)
 
   print_board(state.player_pool.current().board)
   Thread.sleep(500)
 
   state.status match {
-    case GameStatus.Win => print_with_effect(s"$Player ${current_player.id} win!", PrinterEffects.Bold)
-    case GameStatus.Lose => print_with_effect(s"$Player ${current_player.id} lost...", PrinterEffects.Bold)
+    case GameStatus.Win(player) => print_with_effect(s"Player ${player.id.id} win!", PrinterEffects.Bold)
+    case GameStatus.Lose => print_with_effect(s"Player ${current_player.id.id} lost...", PrinterEffects.Bold)
     case GameStatus.Continue => ()
   }
 
