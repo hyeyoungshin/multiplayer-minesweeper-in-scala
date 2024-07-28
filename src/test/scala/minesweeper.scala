@@ -58,32 +58,32 @@ class Minesweeper extends AnyFunSuite {
     // [R(E), H]
     // [H, H]
     val updated_playerboard_2x2 = 
-      Board(2, 2, playerboard_2x2.tile_map + (Coordinate(0,0) -> PlayerTile.Revealed(SolutionTile.Empty)))
+      Board(2, 2, playerboard_2x2.tile_map + (Coordinate(0,0) -> PlayerTile(Some(SolutionTile.Empty), None)))
     
     val test = reveal_neighbors(solutionboard_2x2, updated_playerboard_2x2, Coordinate(0, 0))
 
-    assert(test.tile_map(Coordinate(1, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
-    assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
+    assert(test.tile_map(Coordinate(1, 0)) == PlayerTile(Some(SolutionTile.Empty), None))
+    assert(test.tile_map(Coordinate(0, 1)) == PlayerTile(Some(SolutionTile.Hint(1)), None))
   }
 
   test("reveal-one-tile") {
-    val test = reveal(solutionboard_3x3)(playerboard_3x3, test_pos)
+    val test = reveal(solutionboard_3x3, test_pos)(playerboard_3x3)
 
-    assert(test.tile_map(Coordinate(1, 2)) == PlayerTile.Revealed(SolutionTile.Hint(2)))
+    assert(test.tile_map(Coordinate(1, 2)) == PlayerTile(Some(SolutionTile.Hint(2)), None))
   }
 
   test("reveal-more-tiles-if-empty") {
-    val test = reveal(solutionboard_3x3)(playerboard_3x3, Coordinate(1, 0))
+    val test = reveal(solutionboard_3x3, Coordinate(1, 0))(playerboard_3x3)
 
-    assert(test.tile_map(Coordinate(0, 0)) == PlayerTile.Revealed(SolutionTile.Empty))
-    assert(test.tile_map(Coordinate(0, 1)) == PlayerTile.Revealed(SolutionTile.Hint(1)))
+    assert(test.tile_map(Coordinate(0, 0)) == PlayerTile(Some(SolutionTile.Empty), None))
+    assert(test.tile_map(Coordinate(0, 1)) == PlayerTile(Some(SolutionTile.Hint(1)), None))
   }
 
   test("reveal-all-mines-if-hit-mine") {
-    val test = reveal(solutionboard_3x3)(playerboard_3x3, Coordinate(0, 2))
+    val test = reveal(solutionboard_3x3, Coordinate(0, 2))(playerboard_3x3)
 
-    assert(test.tile_map(Coordinate(0, 2)) == PlayerTile.Revealed(SolutionTile.Mine))
-    assert(test.tile_map(Coordinate(2, 2)) == PlayerTile.Revealed (SolutionTile.Mine))
+    assert(test.tile_map(Coordinate(0, 2)) == PlayerTile(Some(SolutionTile.Mine), None))
+    assert(test.tile_map(Coordinate(2, 2)) == PlayerTile(Some(SolutionTile.Mine), None))
   }
 
   test("convert_input_coordinates") {
