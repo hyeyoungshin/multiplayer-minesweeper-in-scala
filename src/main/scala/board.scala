@@ -25,7 +25,11 @@ enum SolutionTile:
 
 // Up side: possible to represent a tile that's both revealed and flagged (by another player)
 // Down side: invalid state (Revealed and Flagged by the the same player) is representable!
-case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[PlayerID])
+case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[PlayerID]):
+  def is_flagged(): Boolean = flagged_by match {
+    case Some(_) => true
+    case None => false
+  }
 
 
 // enum PlayerTile:

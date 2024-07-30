@@ -4,15 +4,16 @@
 case class GameState (val solution: Solution,         
                       val player_pool: PlayerPool,
                       val status: GameStatus)           
-                      
+
 case class Solution(val board: SolutionBoard, val num_mines: Int)
 
 enum GameStatus:
-  case Win 
+  case Win(who: Player)
   case Lose 
   case Continue
 
 case class GameDifficulty(val size: (Int, Int), val num_mines: Int)
+
 final val Easy = GameDifficulty((3, 3), 2)
 final val Medium = GameDifficulty((5, 5), 4)
 final val Hard = GameDifficulty((7, 7), 9)
@@ -21,14 +22,47 @@ final val Hard = GameDifficulty((7, 7), 9)
 //////////////////////////////
 ///// Data types: Player /////
 //////////////////////////////
+
+/* Datatype PlayerPool
+1. Keeps track of the current player with index `next`
+2. updates the current player's or everyone's board after each move 
+Fields:
+  `players` is the list of players in the game
+  `next` is the index of the current player 
+Methods:
+  `current` gives the current player in the pool
+  `next_pool` gives a player pool with the current players and `next` index incremented
+ */
 case class PlayerPool(val players: List[Player], val next: Int):
   def current(): Player = players(next)
+  def next_pool(): PlayerPool = PlayerPool(players, (next + 1) % players.length)
 
 
-case class Player(val id: PlayerID, val board: PlayerBoard)
+/* Datatype Player
+Provides a way to construct a player
+Fields:
+  `id` is an int value and plays a role of player identifieer
+  `board` represents the state of the player's board
+*/
+case class Player(val id: PlayerID, val board: PlayerBoard, val color: PlayerColor)
 
-type PlayerID = Int
+case class PlayerID(val n: Int)
 
+case class PlayerColor(val code: String)
+
+final val Red =  PlayerColor("\u001b[31m")
+final val Blue = PlayerColor("\u001B[34m")
+
+def player_colors(): List[PlayerColor] = List(Red, Blue)
+
+def colors(): List[PlayerColor] = List(Red, Blue)
+
+/* Datatype PlayerAction
+Provides a way to check validity of an action in combination with tile coordinate
+Fields:
+  `action` is one of Reveal, Flag, and Unflag
+  `pos` is a tile position in the board
+*/
 case class PlayerAction(val action: Action, val pos: Coordinate)
 
 enum Action:
@@ -51,22 +85,20 @@ def new_game(difficulty: GameDifficulty): GameState =
             status = GameStatus.Continue)
             
 
-// TODO: use map and range or list comprehension
-def initialize_players(num_players: Int, player_board: PlayerBoard): PlayerPool = 
-  def loop(counter: Int, acc: List[Player]): List[Player] = 
-    if counter == 0 then
-      acc
-    else 
-      loop(counter - 1, Player(id = counter,
-                               board = player_board) :: acc)
-
-  PlayerPool(loop(num_players, List()), 0)
+/* initializes a player pool for the new game
+   each player is given an id and a new player board with all tiles hidden
+*/
+def initialize_players(num_players: Int, player_board: PlayerBoard): PlayerPool = {
+  val players = (0 until num_players).map(n => Player(id = PlayerID(n), board = player_board, color = player_colors()(n))).toList
+  
+  PlayerPool(players, 0)
+}
 
 
 def game_over(state: GameState): Boolean = 
   state.status match {
     case GameStatus.Lose => true
-    case GameStatus.Win => true
+    case GameStatus.Win(_) => true
     case GameStatus.Continue => false
   }
 
@@ -80,8 +112,6 @@ def play(state: GameState, player_action: PlayerAction): GameState =
       val updated_player_pool = (player_action.action, player_action.pos) match {
         case (Action.Reveal, pos) => update_player(state.player_pool, reveal(state.solution.board, pos))
         case (Action.Flag, pos) => update_player_pool(state.player_pool, flag(current_player, pos))
-          // {val updated_players = state.player_pool.players.map(player => update_player(state, pos, flag(current_player)))
-          // updated_players.foldRight(state.player_pool)((player, pool) => update_player_pool(pool, player))}
         case (Action.Unflag, pos) => update_player_pool(state.player_pool, unflag(current_player, pos))
       }
       
@@ -97,54 +127,36 @@ def update_player(player_pool: PlayerPool, update: PlayerBoard => PlayerBoard): 
   val current = player_pool.next
   val current_player = original_player_list(current)
   
-  PlayerPool(original_player_list.updated(current, Player(current_player.id, update(current_player.board))), current)
+  PlayerPool(players = original_player_list.updated(current, current_player.copy(board = update(current_player.board))), 
+             next = current)
 }
 
 // pos is not manipulated in the body, it's just passed along to action, so remove it
 def update_player_pool(player_pool: PlayerPool, update: PlayerBoard => Option[PlayerBoard])
 : PlayerPool = {
   val updated_players = player_pool.players.map(player => update(player.board) match {
-    case Some(new_player_board) => Player(player.id, new_player_board)
-    case None => Player(player.id, player.board) // tile at pos was already revealed or flagged // TODO
+    case Some(new_player_board) => player.copy(board = new_player_board) // Player(player.id, new_player_board)
+    case None => player.copy()
   })
 
   PlayerPool(players = updated_players, next = player_pool.next)
 }
 
 
-// def update_player(state: GameState, pos: Coordinate, update: ((PlayerBoard, Coordinate) => PlayerBoard) | 
-//                                                              ((PlayerBoard, Coordinate) => Option[PlayerBoard])
-//   ): Player = {
-//   val current_player = state.player_pool.current()
-  
-//   update(current_player.board, pos) match {
-//     case player_board: PlayerBoard => Player(current_player.id, player_board)
-//     case option_player_board: Option[PlayerBoard] => option_player_board match {
-//       case Some(player_board) => Player(current_player.id, player_board)
-//       case None => update_player(state, get_valid_coordinate(state), update)
-//     }
-//   }
-// }
-
-
-// def update_player_pool(player_pool: PlayerPool, new_player: Player): PlayerPool = 
-//   PlayerPool(player_pool.players.updated(player_pool.next, new_player), player_pool.next)                                         
-
-
 def update_state(state: GameState, new_player_pool: PlayerPool, tile_pos: Coordinate): GameState = {
   val new_player_board = new_player_pool.current().board
   // update status
   val new_status = 
-    if has_won(state.solution.board, new_player_board) then
-      GameStatus.Win
+    if all_mines_flagged(state.solution.board, new_player_board) then
+      // has_won_1: if only mines are flagged by the current player
+      has_won_1(state.player_pool.current(), state.solution.num_mines) 
+      // has_won_2: sum up points for flags on mine + 1 and non-mine - 1
+      // TODO: What if it's a tie?
+      // has_won_2(state.solution.board, state.player_pool.players)
     else
       new_player_board.tile_map(tile_pos) match {
-        case PlayerTile.Revealed(SolutionTile.Mine) => GameStatus.Lose
-        case PlayerTile.Revealed(SolutionTile.Empty) => GameStatus.Continue
-
-        case PlayerTile.Revealed(SolutionTile.Hint(_)) => GameStatus.Continue
-        case PlayerTile.Flagged(_) => GameStatus.Continue
-        case PlayerTile.Hidden => GameStatus.Continue
+        case PlayerTile(Some(SolutionTile.Mine), _) => GameStatus.Lose
+        case _ => GameStatus.Continue
       }
     
   GameState(state.solution, new_player_pool, new_status)
@@ -153,29 +165,92 @@ def update_state(state: GameState, new_player_pool: PlayerPool, tile_pos: Coordi
 
 def next_player(state: GameState): GameState = {
   val current_pool = state.player_pool
-  //TODO: make it PlayerPool method
-  val next_pool = PlayerPool(current_pool.players, (current_pool.next + 1) % current_pool.players.length)
-  
-  // GameState(state.solution, next_pool, state.status)
   // copy makes it easy if additional fields are added later
-  state.copy(player_pool = next_pool)
+  state.copy(player_pool = current_pool.next_pool())
 }
 
 
-/* player wins if they find all mines which means
-number of hidden playertiles equals number of mines AND
-number of flagged playertiles is 0
+/* In general, player wins if they find all mines by placing flags and avoiding revealing mines
+
+There could be two scenarios:
+  1. wins flags are only placed on mines (if there are flags on non-mine tiles, you need to unflag them to win)
+  2. wins as soon as all mines are flagged (flags can be placed on non-mine tiles but there is penalty for that)
+     or all non-mine tiles revealed
+
+SolutionBoard Ex: 
+((0, 0) -> SolutionTile.Mine), ((0, 1) -> SolutionTile.Hint(2)), ((0, 2) -> SolutionTile.Empty) ...
+
+PlayerBoard Ex:
+(((0, 0) -> PlayerTile(Some(SolutionTile.Mine)), None), 
+((0, 1) -> PlayerTile(None, Some(PlayerID(1))), 
+((0, 2) -> PlayerTile(Some(SolutionTile.Empty)), None) ...)
 */
-def has_won(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = {
-  val num_mines = solution_board.tile_map.count((_, tile) => tile == SolutionTile.Mine)
-  val num_hidden = player_board.tile_map.count((_, tile) => tile == PlayerTile.Hidden)
-  val num_flagged = player_board.tile_map.count((_, tile) => tile == PlayerTile.Flagged)
+def all_mines_flagged(solution_board: SolutionBoard, player_board: PlayerBoard): Boolean = {
+  // locate all the mines in solution board
+  val mines = solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
+  // all and only the mines are flagged by a player
+  mines.foldRight(true)((x, b) => player_board.tile_map(x._1) match {
+    case PlayerTile(_, Some(_)) => true && b
+    case _ => false && b
+  })
+}
 
-  num_hidden == num_mines && num_flagged == 0
+def has_won_1(player: Player, num_mines: Int): GameStatus = {
+  if num_all_flags(player) == num_mines then
+    GameStatus.Win(player)
+  else
+    GameStatus.Continue
 }
 
 
-// Node:
+def has_won_2(solution_board: SolutionBoard, players: List[Player]): GameStatus = {
+  val points = players.map(player => 
+    num_flags_on_mines(true, solution_board, player) - num_flags_on_mines(false, solution_board, player))
+
+  GameStatus.Win(players(points.indexOf(points.max)))
+}
+
+
+def num_all_flags(player: Player): Int = {
+  player.board.tile_map.foldRight(0)((x, z) => if x._2.is_flagged() then z + 1 else z)
+}
+
+// def num_flags_on_mines(solution_board: SolutionBoard, player: Player): Int = {
+//   val mines = solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
+
+//   mines.foldRight(0)((x, z) => player.board.tile_map(x._1).flagged_by match {
+//     case Some(id) if player.id == id => z + 1
+//     case _ => z
+//   })
+// }
+
+
+def num_flags_on_mines(is_mine: Boolean, solution_board: SolutionBoard, player: Player): Int = {
+  val s_tiles = // type of tiles we look for flags
+    if is_mine then
+      solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
+    else
+      solution_board.tile_map.filter((pos, s_tile) => s_tile != SolutionTile.Mine)
+
+  s_tiles.foldRight(0)((x, z) => player.board.tile_map(x._1).flagged_by match {
+    case Some(id) if player.id == id => z + 1
+    case _ => z
+  })
+}
+
+
+// def num_flags_not_on_mines(solution_board: SolutionBoard, player: Player): Int = {
+//   val non_mines = solution_board.tile_map.filter((pos, s_tile) => s_tile != SolutionTile.Mine)
+
+//   non_mines.foldRight(0)((x, z) => player.board.tile_map(x._1).flagged_by match {
+//     case Some(id) if player.id == id => z + 1
+//     case _ => z
+//   })
+// }
+
+
+
+// Note:
 // Separate Game(model) and text ui(view).
 // Game - Coordinate || text ui - InputCoordinate
 // To clean up, we rebuilt via Metals
