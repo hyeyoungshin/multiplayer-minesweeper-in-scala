@@ -36,6 +36,7 @@ Methods:
 case class PlayerPool(val players: List[Player], val next: Int):
   def current(): Player = players(next)
   def next_pool(): PlayerPool = PlayerPool(players, (next + 1) % players.length)
+  def get_player(id: PlayerID): Player = players(id.n)
 
 
 /* Datatype Player
@@ -45,6 +46,7 @@ Fields:
   `board` represents the state of the player's board
 */
 case class Player(val id: PlayerID, val board: PlayerBoard, val color: PlayerColor)
+
 
 case class PlayerID(val n: Int)
 
@@ -155,7 +157,9 @@ def update_state(state: GameState, new_player_pool: PlayerPool, tile_pos: Coordi
       // has_won_2(state.solution.board, state.player_pool.players)
     else
       new_player_board.tile_map(tile_pos) match {
-        case PlayerTile(Some(SolutionTile.Mine), _) => GameStatus.Lose
+        case PlayerTile.Revealed(SolutionTile.Mine) => GameStatus.Lose
+        case PlayerTile.RNF(SolutionTile.Mine, _) => GameStatus.Lose
+        // case PlayerTile(Some(SolutionTile.Mine), _) => GameStatus.Lose
         case _ => GameStatus.Continue
       }
     
@@ -190,7 +194,8 @@ def all_mines_flagged(solution_board: SolutionBoard, player_board: PlayerBoard):
   val mines = solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
   // all and only the mines are flagged by a player
   mines.foldRight(true)((x, b) => player_board.tile_map(x._1) match {
-    case PlayerTile(_, Some(_)) => true && b
+    case PlayerTile.Flagged(_) => true && b
+    case PlayerTile.RNF(_, _) => true && b
     case _ => false && b
   })
 }
@@ -205,14 +210,18 @@ def has_won_1(player: Player, num_mines: Int): GameStatus = {
 
 def has_won_2(solution_board: SolutionBoard, players: List[Player]): GameStatus = {
   val points = players.map(player => 
-    num_flags_on_mines(true, solution_board, player) - num_flags_on_mines(false, solution_board, player))
+    num_flags_on_mines_by(true, solution_board, player) - num_flags_on_mines_by(false, solution_board, player))
 
   GameStatus.Win(players(points.indexOf(points.max)))
 }
 
 
 def num_all_flags(player: Player): Int = {
-  player.board.tile_map.foldRight(0)((x, z) => if x._2.is_flagged() then z + 1 else z)
+  player.board.tile_map.foldRight(0)((x, z) => x._2 match {
+    case PlayerTile.Flagged(_) => z + 1
+    case PlayerTile.RNF(_, _) => z + 1
+    case _ => z
+  })
 }
 
 // def num_flags_on_mines(solution_board: SolutionBoard, player: Player): Int = {
@@ -225,15 +234,17 @@ def num_all_flags(player: Player): Int = {
 // }
 
 
-def num_flags_on_mines(is_mine: Boolean, solution_board: SolutionBoard, player: Player): Int = {
+def num_flags_on_mines_by(is_mine: Boolean, solution_board: SolutionBoard, player: Player): Int = {
   val s_tiles = // type of tiles we look for flags
     if is_mine then
       solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
     else
       solution_board.tile_map.filter((pos, s_tile) => s_tile != SolutionTile.Mine)
 
-  s_tiles.foldRight(0)((x, z) => player.board.tile_map(x._1).flagged_by match {
-    case Some(id) if player.id == id => z + 1
+  s_tiles.foldRight(0)((x, z) => player.board.tile_map(x._1) match {
+    case PlayerTile.Flagged(by) if by == player.id => z + 1
+    case PlayerTile.RNF(_, by) if by == player.id => z + 1
+    // case Some(id) if player.id == id => z + 1
     case _ => z
   })
 }

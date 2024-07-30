@@ -25,17 +25,19 @@ enum SolutionTile:
 
 // Up side: possible to represent a tile that's both revealed and flagged (by another player)
 // Down side: invalid state (Revealed and Flagged by the the same player) is representable!
-case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[PlayerID]):
-  def is_flagged(): Boolean = flagged_by match {
-    case Some(_) => true
-    case None => false
-  }
+// case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[PlayerID]):
+//   def is_flagged(): Boolean = flagged_by match {
+//     case Some(_) => true
+//     case None => false
+//   }
 
 
-// enum PlayerTile:
-//   case Hidden
-//   case Revealed (tile: SolutionTile)
-//   case Flagged (by: Player)
+enum PlayerTile:
+  case Hidden
+  case Revealed (tile: SolutionTile)
+  case Flagged (by: Player)
+  case RNF(tile: SolutionTile, by: Player) // Revealed AND Flagged
+                                             // by is NEVER the player who owns the tile
 
 
 // * Represents tile positions on the boards
@@ -115,7 +117,7 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard = {
   Board(
     xsize = xlen,
     ysize = ylen,
-    tile_map = range.map((x, y) => (Coordinate(x, y), PlayerTile(None, None))).toMap
+    tile_map = range.map((x, y) => (Coordinate(x, y), PlayerTile.Hidden)).toMap
   )
 }
 
@@ -145,8 +147,8 @@ def reveal(solutionboard: SolutionBoard, tile_pos: Coordinate)(playerboard: Play
   // other cases are filtered by player action validity check
   val solution_tile = solutionboard.tile_map(tile_pos)
   val updated_board = playerboard.tile_map(tile_pos) match {
-    case PlayerTile(None, None) => update_board(playerboard, tile_pos, PlayerTile(Some(solution_tile), None))
-    case PlayerTile(None, by) => update_board(playerboard, tile_pos, PlayerTile(Some(solution_tile), by))
+    case PlayerTile.Hidden => update_board(playerboard, tile_pos, PlayerTile.Revealed(solution_tile))
+    case PlayerTile.Flagged(by) => update_board(playerboard, tile_pos, PlayerTile.RNF(solution_tile, by))
     case _ => playerboard
     
   }
@@ -166,7 +168,8 @@ def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, til
 
   neighbors.foldLeft(playerboard)(
     (acc, tile_pos) => playerboard.tile_map(tile_pos) match {
-      case PlayerTile(Some(_), _) => acc
+      case PlayerTile.Revealed(_) => acc
+      case PlayerTile.RNF(_, _) => acc
       case _ => reveal(solutionboard, tile_pos)(acc)
     }
   )
@@ -185,7 +188,7 @@ def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): Pl
   val filtered_map = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
   
   filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => 
-    update_board(acc, tile_pos, PlayerTile(Some(SolutionTile.Mine), None)))
+    update_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
 }
 
 
@@ -194,7 +197,7 @@ def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): Pl
 */
 def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile(None, None) => Some(update_board(playerboard, pos, PlayerTile(None, Some(by.id))))
+    case PlayerTile.Hidden => Some(update_board(playerboard, pos, PlayerTile.Flagged(by)))
     case _ => None // should not reach this case
   }
 }  
@@ -205,11 +208,14 @@ def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBo
 */
 def unflag(player: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile(None, by) => by match {
-      case Some(by) if by == player.id => Some(update_board(playerboard, pos, PlayerTile(None, None)))
-      case _ => None // should not reach this case
-    }
-    case _ => None // should not reach this case
+    case PlayerTile.Flagged(by) if by.id == player.id => Some(update_board(playerboard, pos, PlayerTile.Hidden))
+    case _ => None
+
+    // case PlayerTile(None, by) => by match {
+    //   case Some(by) if by == player.id => Some(update_board(playerboard, pos, PlayerTile(None, None)))
+    //   case _ => None // should not reach this case
+    // }
+    // case _ => None // should not reach this case
   }
 }
 

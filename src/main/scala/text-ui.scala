@@ -127,7 +127,8 @@ def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coo
   val current_player = state.player_pool.current()
   if current_player.board.within_boundary(tile_pos) then
     current_player.board.tile_map(tile_pos) match {
-      case PlayerTile(Some(s_tile), _) => Left("The tile is alreay revealed.")
+      case PlayerTile.Revealed(_) => Left("The tile is alreay revealed.")
+      case PlayerTile.RNF(_, _) => Left("The tile is alreay revealed.")
       case _ => Right(tile_pos)
     }
   else 
@@ -159,9 +160,11 @@ def valid_player_action(state: GameState, player_action: PlayerAction): Either[S
 
   player_action.action match {
     case Action.Flag => p_tile match {
-      case PlayerTile(None, None) => Right(player_action) 
-      case PlayerTile(None, Some(player_id)) => Left(s"The tile is already flagged by Player ${player_id}.")
-      case PlayerTile(Some(tile), _) => Left(s"The tile is already revealed.")
+      case PlayerTile.Hidden => Right(player_action) 
+      case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id.n}.")
+      case PlayerTile.Revealed(_) => Left(s"The tile is already revealed.")
+      case PlayerTile.RNF(_, _) => Left(s"The tile is already revealed.")
+
       
       // case PlayerTile.Hidden => Right(player_action) 
       // case PlayerTile.Flagged(by) => Left(s"The tile is already flagged by Player ${by.id}.")
@@ -169,22 +172,24 @@ def valid_player_action(state: GameState, player_action: PlayerAction): Either[S
     }
     
     case Action.Reveal => p_tile match {
-      case PlayerTile(None, None) => Right(player_action) 
-      case PlayerTile(None, Some(player_id)) => 
-        if player_id != current_player.id then 
+      case PlayerTile.Hidden => Right(player_action) 
+      case PlayerTile.Flagged(by) =>
+        if by.id != current_player.id then 
           Right(player_action) // you can reveal a tile flagged by another player
         else
-          Left(s"The tile is already flagged by Player ${player_id}")
-      case PlayerTile(Some(tile), _) => Left(s"The tile is already revealed.")
+          Left(s"The tile is already flagged.")
+      case PlayerTile.Revealed(_) => Left(s"The tile is already revealed.")
+      case PlayerTile.RNF(_, _) => Left(s"The tile is already revealed.")
     }
     
     case Action.Unflag => p_tile match {
-        case PlayerTile(None, Some(player_id)) =>  
-          if player_id == current_player.id then 
-            Right(player_action)
-          else
-            Left(s"The tile is flagged by Player ${player_id}.")
-        case _ => Left("You cannot unflag a tile that's not flagged.") 
+      case PlayerTile.Flagged(by) => 
+        if by.id == current_player.id then
+          Right(player_action)
+        else
+          Left(s"The tile is already flagged by Player ${by.id.n}.") 
+      case PlayerTile.RNF(_, _) => Left("The tile is already revealed.")
+      case _ => Left("You cannot unflag a tile that's not flagged.") 
       }
     }
 }
@@ -223,37 +228,6 @@ def print_difficulty(difficulty: GameDifficulty): Unit = {
 }
 
 
-def player_tile_to_string(p_tile: PlayerTile): String = p_tile match {
-  case PlayerTile(None, None) => "[ ]"
-  case PlayerTile(None, Some(player_id)) => "[F]" //TODO: add color by player
-  case PlayerTile(Some(s_tile), _) => solution_tile_to_string(s_tile)
-}
-
-
-def solution_tile_to_string(s_tile: SolutionTile): String = s_tile match {
-  case SolutionTile.Empty => "[E]"
-  case SolutionTile.Mine => "[x]"
-  case SolutionTile.Hint(n) => s"[$n]"
-
-}
-
-
-def print_board(player_board: PlayerBoard): Unit = 
-  val str_board = Array.fill(player_board.xsize)(Array.fill(player_board.ysize)(""))
-  player_board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = player_tile_to_string(tile))
-  print_helper[String](str_board)
-
-
-// * Prints boards in the matrix form (Array of Arrays)
-// ** You give
-// board : Array of Arrays of type T, where T can be Int for input board or String for Tile
-// ** You get
-// print out of the board  
-def print_helper[T](board: Array[Array[T]]): Unit = 
-  println(board.map(_.mkString("")).mkString("\n"))
-  println("")
-
-
 def print_state(state: GameState): Unit = 
   print_inplace()
   val current_player = state.player_pool.current()
@@ -268,6 +242,39 @@ def print_state(state: GameState): Unit =
     case GameStatus.Lose => print_with_effect(s"Player ${current_player.id.n} lost...", PrinterEffects.Bold)
     case GameStatus.Continue => ()
   }
+
+
+def print_board(player_board: PlayerBoard): Unit = 
+  val str_board = Array.fill(player_board.xsize)(Array.fill(player_board.ysize)(""))
+  player_board.tile_map.map((tile_pos, tile) => str_board(tile_pos._1)(tile_pos._2) = player_tile_to_string(tile))
+  print_helper[String](str_board)
+
+
+def solution_tile_to_string(s_tile: SolutionTile): String = s_tile match {
+  case SolutionTile.Empty => "E"
+  case SolutionTile.Mine => "x"
+  case SolutionTile.Hint(n) => s"$n"
+}
+
+
+def player_tile_to_string(p_tile: PlayerTile): String = p_tile match {
+  case PlayerTile.Hidden => "[   ]"
+  case PlayerTile.Flagged(by) => s"[ ${by.color.code}F${PrinterEffects.Reset} ]"
+  case PlayerTile.Revealed(s_tile) => s"[ ${solution_tile_to_string(s_tile)} ]"
+  case PlayerTile.RNF(s_tile, by) => 
+    s"[${solution_tile_to_string(s_tile)}|${by.color.code}F${PrinterEffects.Reset}]"
+}
+
+
+// * Prints boards in the matrix form (Array of Arrays)
+// ** You give
+// board : Array of Arrays of type T, where T can be Int for input board or String for Tile
+// ** You get
+// print out of the board  
+def print_helper[T](board: Array[Array[T]]): Unit = 
+  println(board.map(_.mkString("")).mkString("\n"))
+  println("")
+
 
 
 // Rust style Result type
