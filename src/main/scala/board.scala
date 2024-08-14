@@ -241,13 +241,20 @@ def reveal_neighbors(solution_board: SolutionBoard, player_board: PlayerBoard, t
 }
 
 
+
 // Reveals all existing mines on the playerboard
-def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard = {
-  val mine_locations = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
+def reveal_all_mines(solution_board: SolutionBoard, player_board: PlayerBoard): PlayerBoard = {
+  val mine_locations = mine_coordinates(solution_board)
+    // solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine).keys
   
-  mine_locations.keys.foldLeft(playerboard)((acc, tile_pos) => 
-    update_player_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
+  mine_locations.foldLeft(player_board)((acc, pos) => 
+    player_board.tile_map(pos) match {
+      case PlayerTile.Flagged(flagger) => update_player_board(acc, pos, PlayerTile.RevealedNFlagged(SolutionTile.Mine, flagger))
+      case _ => update_player_board(acc, pos, PlayerTile.Revealed(SolutionTile.Mine))
+    }
+  )
 }
+
 
 
 // Flags the tile at the coordinate on the playerboard

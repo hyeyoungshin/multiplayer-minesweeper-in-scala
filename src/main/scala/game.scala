@@ -262,11 +262,12 @@ def get_points(player: Player, mine_coordinates: Set[Coordinate]): Int = {
 
 /* Returns the list of mine Coordinates. */
 def mine_coordinates(solution_board: SolutionBoard): Set[Coordinate] = {
-  solution_board.tile_map.flatMap(x => x._2 match {
-      case SolutionTile.Mine => Some(x._1)
-      case _ => None
-    }
-  ).toSet
+  solution_board.tile_map.filter((_, s_tile) => s_tile == SolutionTile.Mine).keys.toSet
+  // solution_board.tile_map.flatMap(x => x._2 match {
+  //     case SolutionTile.Mine => Some(x._1)
+  //     case _ => None
+  //   }
+  // ).toSet
 
   // use flatMap here or flatten later
 }
