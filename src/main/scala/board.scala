@@ -3,12 +3,59 @@ import scala.util.Random
 /////////////////////////////
 //// Data types for Board////
 /////////////////////////////
-
-case class Board[Tile] (val xsize: Int, val ysize:Int, val tile_map: Map[Coordinate, Tile]):
+// The internal representation of the board
+// * Input
+// xsize: the board's horizontal size
+// ysize: the board's vertical size
+// tile_map: a map from a coordinate on the board to a tile
+// * Output
+// One of mineboard, player board, or solution board depending on the tile types
+case class Board[Tile] (val xsize: Int, val ysize: Int, val tile_map: Map[Coordinate, Tile]) {
+  // Checks a coordinate is within board boundary
+  // i.e.,
+  // [][][]
+  // [][][]
+  // [][][]
+  // (3,1) is not withint the boundary of the above board
+  // * Input
+  // tile_pos: a coordinate to check
+  // * Output
+  // whether the coordinate is within the boundary or not
   def within_boundary(tile_pos: Coordinate): Boolean = 
     tile_pos.x > -1 && tile_pos.y > -1 && tile_pos.x < xsize && tile_pos.y < ysize
 
+  // Identifies neighboring coordinates
+  // i.e.,
+  //    0 1 2
+  // 0 [ ][][]
+  // 1 [ ][][]
+  // 2 [x][][]
+  // the neighboring coordinates of marked tile are ((0,1),(1,1),(1,2))
+  // * Input
+  // board: one of solution board, player board, mineboard
+  // tile_pos: a cooredinate on the board
+  // * Output
+  // List of neighboring coordinates
+  def neighbors_inbounds(tile_pos: Coordinate): List[Coordinate] = {
+    val all_neighbors = List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
+        (i, j) => Coordinate(tile_pos.x + i, tile_pos.y + j))
+    
+    all_neighbors.filter(tile_pos => this.within_boundary(tile_pos))
+  }
 
+  // Prints a board for testing purposes
+  // i.e., for mines located at (Coordinate(0, 1), Coordinate(1, 2)), it prints out
+  // [ ][ ][]
+  // [*][ ][]
+  // [ ][*][]
+  def print_board_for_test(): Unit = {
+    val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
+    this.tile_map.map((tile_pos, tile) => str_board(tile_pos.y)(tile_pos.x) = tile_to_string(tile))
+    print_as_matrix[String](str_board)
+  } 
+}
+
+// The three types of the boards to make the game work
 type SolutionBoard = Board[SolutionTile]
 type PlayerBoard = Board[PlayerTile]
 type MineBoard = Board[Boolean]
@@ -17,92 +64,116 @@ type MineBoard = Board[Boolean]
 enum SolutionTile: 
   case Empty
   case Mine
-  case Hint (hint: Int)
-// case Hidden (flagged: Boolean) allows winning condition to only consider
-// number of Hidden tiles 
-// otherwise, Flagged tiles need to be unflagged to 
-
-
-// Up side: possible to represent a tile that's both revealed and flagged (by another player)
-// Down side: invalid state (Revealed and Flagged by the the same player) is representable!
-// case class PlayerTile(val revealed: Option[SolutionTile], val flagged_by: Option[PlayerID]):
-//   def is_flagged(): Boolean = flagged_by match {
-//     case Some(_) => true
-//     case None => false
-//   }
+  case Hint (num_of_neighboring_mines: Int) // number of mines in the neighboring tiles
 
 
 enum PlayerTile:
   case Hidden
   case Revealed (tile: SolutionTile)
-  case Flagged (by: Player)
-  case RNF(tile: SolutionTile, by: Player) // Revealed AND Flagged
-                                             // by is NEVER the player who owns the tile
+  case Flagged (flagger: Player)
+  case RevealedNFlagged(tile: SolutionTile, flagger: Player)
+                                                  
 
 
-// * Represents tile positions on the boards
-//
-// ** You give
+// Internal representation of tile positions for the boards
+// i.e., a 3 x 3 board:
+// [(0,0)][(1,0)][(2,0)]
+// [(0,1)][(1,1)][(2,1)]
+// [(0,2)][(1,2)][(2,2)]
+
+// * Input
 // x : starting from top left corner (0, 0) grow to the right 
 // y : starting from top left corner (0, 0) grow downwards
-// ** You get
-// A tile position on the board
+// * Output
+// A tile position on a board
 case class Coordinate (val x: Int, val y: Int)
+
 
 ////////////////////////
 //// Creating Board/////
 ////////////////////////
 
-/* mine locations are generated randomly depending on game difficulty */
-def generate_mine_locations(difficulty: GameDifficulty): MineBoard =
-  val xsize = difficulty.size._1
-  val ysize = difficulty.size._2
-  var arr_board = Array.fill(xsize)(Array.fill(ysize)(0))
-  val random_coordinates = Random.shuffle(generate_coordinate_keys(xsize, ysize))
+// Creates a mineboard based on difficulty
+// - Easy: a 3x3 board with 2 mines
+// - Intermediate: a 5x5 board with 4 mines
+// - Expert: a 7x7 board with 9 mines
+// and the mine locations are randomly selected
+// * Input
+// difficulty: one of easy, intermediate, expert
+// * Output
+// A mineboard where a boolean value indicates whether or not mine is located
+def create_mineboard_for_game(difficulty: GameDifficulty): MineBoard = {
+  val xsize = difficulty.board_size._1 // 3
+  val ysize = difficulty.board_size._2 // 3
+
+  val coordinate_keys = generate_coordinate_keys(xsize, ysize) // ((0,0),(1,0),(2,0),(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)
+
+  // randomly shuffle coordinate_keys and pick some
+  val mine_coordinates = Random.shuffle(coordinate_keys).take(difficulty.num_mines)
   
-  val mine_locations = random_coordinates.take(difficulty.num_mines)
-  mine_locations.foreach((x, y) => arr_board(x)(y) = 1)
-  create_mineboard(arr_board)
+  // [ ][ ][]
+  // [*][ ][]
+  // [ ][*][]
+  // val mine_coordinates = List(Coordinate(0, 1), Coordinate(1, 2)) // fixed for test
+  
+  val boolean_tile_map = coordinate_keys.map(coordinate => 
+    if mine_coordinates.contains(coordinate) 
+    then 
+      (coordinate, true) // mine
+    else 
+      (coordinate, false) // not mine
+  ).toMap
 
+  Board(
+    xsize,
+    ysize,
+    boolean_tile_map
+  ) 
+}
 
-// * Creates SolutionBoard from MineBoard at the start of game
-// * Derives Hint from the mine locations in MineBoard
+// Creates SolutionBoard from MineBoard at the start of game
+// Derives Hint from the mine locations in MineBoard
 //
 // ** You give
 // mineboard: mine locations
 // ** You get
 // SolutionBoard
 def create_solutionboard(mineboard: MineBoard): SolutionBoard = {
-  val range = generate_coordinate_keys(mineboard.xsize, mineboard.ysize) 
+  val coordinate_keys = generate_coordinate_keys(mineboard.xsize, mineboard.ysize) 
     
   Board(
     xsize = mineboard.xsize,
     ysize = mineboard.ysize,
-    tile_map = range.map( (x, y) => ( Coordinate(x, y), generate_solutiontile_at(mineboard, Coordinate(x, y)) ) ).toMap
+    tile_map = coordinate_keys.map(coordinate => (coordinate, generate_solution_tile(mineboard, coordinate))).toMap
   )
 }
 
-// * Creates MineBoard which represents the mine locations from GameInput at the start of game
-// * MineBoard is necessary for creating SolutionBoard 
+// Creates a mineboard from the array of array representation of mine locations from GameInput or test input
+// A mineboard is necessary for creating a solution board
 //
-// ** You give
-// mine_locations : corresponds to GameInput.board from parse_game_input
-// ** You get
+// * Input
+// mine_locations : array of arrays where 1 means there is a mine, can be obtained from GameInput
+// * Output
 // MineBoard where true means a mine; false no mine
-def create_mineboard(mine_locations: Array[Array[Int]]): MineBoard = {
+def create_mineboard_for_test(mine_locations: Array[Array[Int]]): MineBoard = {
   val xlen = mine_locations.length
   val ylen = mine_locations.head.length
 
-  val range = generate_coordinate_keys(xlen, ylen)
+  val coordinate_keys = generate_coordinate_keys(xlen, ylen)
   
+  // [[0, 0, 1],
+  //  [0, 0, 0],
+  //  [0, 0, 1]]
+  // mine locations: (0,2),(2,2)
+  // converts to: Coordinate(2,0), Coordinate(2,2)
   Board(
     xsize = xlen,
     ysize = ylen,
-    tile_map = range.map( (x, y) => ( Coordinate(x, y), mine_locations(x)(y) == 1 )).toMap
+    tile_map = coordinate_keys.map(coordinate => (coordinate, mine_locations(coordinate.y)(coordinate.x) == 1 )).toMap
   )
 }
 
-// * Creates the initial PlayerBoard at the start of a game
+// Creates the initial PlayerBoard at the start of a game
 //
 // ** You give
 // xlen : number of tiles horizontally
@@ -112,12 +183,12 @@ def create_mineboard(mine_locations: Array[Array[Int]]): MineBoard = {
 def create_playerboard(xsize: Int, ysize: Int): PlayerBoard = {
   val xlen = xsize
   val ylen = ysize
-  val range = generate_coordinate_keys(xlen, ylen)
+  val coordinate_keys = generate_coordinate_keys(xlen, ylen)
   
   Board(
     xsize = xlen,
     ysize = ylen,
-    tile_map = range.map((x, y) => (Coordinate(x, y), PlayerTile.Hidden)).toMap
+    tile_map = coordinate_keys.map(coordinate => (coordinate, PlayerTile.Hidden)).toMap
   )
 }
 
@@ -125,97 +196,91 @@ def create_playerboard(xsize: Int, ysize: Int): PlayerBoard = {
 ///////////////////////////////////// 
 //// Updating Board by revealing ////
 /////////////////////////////////////
-/* Updates playerboard by returning a new PalyerBoard with new_tile at tile_pos  */
-def update_board(playerboard: PlayerBoard, tile_pos: Coordinate, new_tile: PlayerTile): PlayerBoard = {
+
+// Updates the playerboard by creating a new playerboard with a new tile at the tile position
+def update_player_board(playerboard: PlayerBoard, tile_pos: Coordinate, new_tile: PlayerTile): PlayerBoard = {
   Board(xsize = playerboard.xsize, 
         ysize = playerboard.ysize, 
         tile_map = playerboard.tile_map + (tile_pos -> new_tile))  
 }
 
 
-// * Reveals the corresponding SolutionTile at Coordinate on PlayerBoard 
-//
-// ** You give
-// solutionboard : board with all tiles revealed (solution tiles)
-// playerboard : player's version of board
-// tile_pos : tile position on playerboard to reveal (player click)
-// * You get
-// PlayerBoard with tile at tile_pos revealed
-def reveal(solutionboard: SolutionBoard, tile_pos: Coordinate)(playerboard: PlayerBoard): PlayerBoard = {
-  // we don't check what type of tile is at tile_pos on the playerboard 
-  // because we can assume it's PlayerTile.Hidden
-  // other cases are filtered by player action validity check
-  val solution_tile = solutionboard.tile_map(tile_pos)
-  val updated_board = playerboard.tile_map(tile_pos) match {
-    case PlayerTile.Hidden => update_board(playerboard, tile_pos, PlayerTile.Revealed(solution_tile))
-    case PlayerTile.Flagged(by) => update_board(playerboard, tile_pos, PlayerTile.RNF(solution_tile, by))
-    case _ => playerboard
+// Reveals the tile on the playerboard at the coordinate
+// - If the revealed tile is 0, it revealed all its neighboring tiles
+// - If the revealed tile is a mine, it reveals all existing mines
+def reveal(solution_board: SolutionBoard, tile_pos: Coordinate)(player_board: PlayerBoard): PlayerBoard = {
+  val solution_tile = solution_board.tile_map(tile_pos)
+  val updated_board = player_board.tile_map(tile_pos) match {
+    case PlayerTile.Hidden => update_player_board(player_board, tile_pos, PlayerTile.Revealed(solution_tile))
+    case PlayerTile.Flagged(by) => update_player_board(player_board, tile_pos, PlayerTile.RevealedNFlagged(solution_tile, by))
+    case _ => player_board
     
   }
   
   solution_tile match {
-    case SolutionTile.Empty => reveal_neighbors(solutionboard, updated_board, tile_pos)
-    case SolutionTile.Mine => reveal_all_mines(solutionboard, updated_board)
+    case SolutionTile.Empty => reveal_neighbors(solution_board, updated_board, tile_pos)
+    case SolutionTile.Mine => reveal_all_mines(solution_board, updated_board)
     case SolutionTile.Hint(_) => updated_board // no further action required
   }
 }
 
 
-// Get neighboring tiles of tile_pos. Check what solutontiles corresponds to neighboring tiles
-// If SolutionTile.Empty reveal_neighbors with updated playerboard at tile_pos
-def reveal_neighbors(solutionboard: SolutionBoard, playerboard: PlayerBoard, tile_pos: Coordinate): PlayerBoard = {
-  val neighbors = neighbors_inbounds(solutionboard, tile_pos)
+// Reveals the neighboring tiles of the tile at the coordinate on the playerboard 
+// - If a neighboring tile is already revealed, nothing happens
+// - If not, reveals it
+def reveal_neighbors(solution_board: SolutionBoard, player_board: PlayerBoard, tile_pos: Coordinate): PlayerBoard = {
+  val neighbors = solution_board.neighbors_inbounds(tile_pos)
 
-  neighbors.foldLeft(playerboard)(
-    (acc, tile_pos) => playerboard.tile_map(tile_pos) match {
+  neighbors.foldLeft(player_board)(
+    (acc, tile_pos) => player_board.tile_map(tile_pos) match {
       case PlayerTile.Revealed(_) => acc
-      case PlayerTile.RNF(_, _) => acc
-      case _ => reveal(solutionboard, tile_pos)(acc)
+      case PlayerTile.RevealedNFlagged(_, _) => acc
+      case _ => reveal(solution_board, tile_pos)(acc)
     }
   )
 }
 
 
-// * Reveals all Mines on PlayerBoard 
-//
-// ** You give
-// solutionboard : board with all tiles revealed (solution tiles)
-// playerboard : player's version of board
-// tile_pos : tile position on playerboard to reveal (player click)
-// * You get
-// PlayerBoard with all mines revealed
+// Reveals all existing mines on the playerboard
 def reveal_all_mines(solutionboard: SolutionBoard, playerboard: PlayerBoard): PlayerBoard = {
-  val filtered_map = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
+  val mine_locations = solutionboard.tile_map.filter((tile_pos, tile) => tile == SolutionTile.Mine)
   
-  filtered_map.keys.foldLeft(playerboard)((acc, tile_pos) => 
-    update_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
+  mine_locations.keys.foldLeft(playerboard)((acc, tile_pos) => 
+    update_player_board(acc, tile_pos, PlayerTile.Revealed(SolutionTile.Mine)))
 }
 
 
-/* update board by flagging player tile at `tile_pos` if the tile is hidden and not flagged
-   otherwise return `None`
-*/
+// Flags the tile at the coordinate on the playerboard
+//
+// * Input
+// by: the player who's flagging the tile
+// pos: the coordinate of the tile to flag
+// playerboard
+// * Output
+// Some board if the tile was hidden (the only valid case)
+// None, otherwise
 def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile.Hidden => Some(update_board(playerboard, pos, PlayerTile.Flagged(by)))
+    case PlayerTile.Hidden => Some(update_player_board(playerboard, pos, PlayerTile.Flagged(by)))
     case _ => None // should not reach this case
   }
 }  
 
 
-/* update board by unflagging player tile at `tile_pos` if the tile is hidden and flagged by the player
-   otherwise return `None`
-*/
+// Unflags the tile at the coordinate on the playerboard
+//   
+// * Input
+// player: the player who's unflagging the tile
+// pos: the coordinate of the tile to unflag
+// playerboard
+// * Output
+// Some board if the tile was flagged by the player
+// None, otherwise
 def unflag(player: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile.Flagged(by) if by.id == player.id => Some(update_board(playerboard, pos, PlayerTile.Hidden))
+    case PlayerTile.Flagged(by) if by.id == player.id => Some(update_player_board(playerboard, pos, PlayerTile.Hidden))
+    case PlayerTile.RevealedNFlagged(s_tile, _) => Some(update_player_board(playerboard, pos, PlayerTile.Revealed(s_tile)))
     case _ => None
-
-    // case PlayerTile(None, by) => by match {
-    //   case Some(by) if by == player.id => Some(update_board(playerboard, pos, PlayerTile(None, None)))
-    //   case _ => None // should not reach this case
-    // }
-    // case _ => None // should not reach this case
   }
 }
 
@@ -224,52 +289,56 @@ def unflag(player: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[Pl
 //// Helper////
 ///////////////
 
-def neighbors_inbounds[T](board: Board[T], tile_pos: Coordinate): List[Coordinate] = 
-  val all_neighbors = List((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)).map(
-      (i, j) => Coordinate(tile_pos.x + i, tile_pos.y + j))
+// Counts number of neighboring mines
+// i.e., 
+// [false][flase][true ]
+// [false][false][false]
+// [false][false][true ]
+// the number of neighboring mines for above mineboard at coordinate (1,2) is 1
+// * Input
+// mineboard: a boolean board where mine coordinates are true
+// tile_pos: coordinate
+// * Ouput
+// the number of nieghboring mines
+def count_neighboring_mines(mineboard: MineBoard, tile_pos: Coordinate): Int = {
+  val neighbors = mineboard.neighbors_inbounds(tile_pos)
+
+  // for each neighboring tile, add 1 if the tile is true (there is a mine)
+  neighbors.foldLeft(0)((acc, tile_pos) => if mineboard.tile_map(tile_pos) then acc + 1 else acc )
+}
+
+
+// Creates a solution tile at the coordinate based on the number of neighboring mines
+// 
+// * Input
+// mineboard : a boolean board where a coordinate is true if there is a mine 
+// tile_pos : a coordinate on the board
+// * Output
+// A solution tile for the coordinate
+def generate_solution_tile(mineboard: MineBoard, tile_pos: Coordinate): SolutionTile = {
+  val num_mines_in_neighbor = count_neighboring_mines(mineboard, tile_pos)
   
-    all_neighbors.filter(tile_pos => board.within_boundary(tile_pos))
-    
-    
-def count_neighboring_mines(mineboard: MineBoard, tile_pos: Coordinate): Int = 
-  val neighbors = neighbors_inbounds(mineboard, tile_pos)
-
-  neighbors.foldLeft(0)( (acc, tile_pos) => if mineboard.tile_map(tile_pos) then acc + 1 else acc )
-
-
-// * Make SolutionTile at tile_pos based on the number of neighboring mines
-//
-// ** You give
-// mineboard : mine locations 
-// tile_pos : Coordinate on Board
-// * You get
-// SolutionTile at Coordinate
-def generate_solutiontile_at(mineboard: MineBoard, tile_pos: Coordinate): SolutionTile = {
-  val num_mines = count_neighboring_mines(mineboard, tile_pos)
   if mineboard.tile_map(tile_pos) then
     SolutionTile.Mine
-  else if num_mines == 0 then
+  else if num_mines_in_neighbor == 0 then
     SolutionTile.Empty
   else 
-    SolutionTile.Hint(num_mines)
+    SolutionTile.Hint(num_mines_in_neighbor)
 }
 
 
-// * Helper to generate Keys for populating Board.tile_map
-// * For a board of size 3 * 3, it generates (0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (2, 0), (2, 1), (2, 1)
+// * Generates coordinate keys for creating boards
+// * i.e., for a board of size 3 * 3, it generates ((0,0),(1,0),(2,0),(0,1),(1,1),(2,1),(0,2),(1,2),(2,2)
 //
-// ** You give
-// xlen : Board's horizontal size
-// ylen : Board's vertical size
-// * You get
-// A sequence of Keys for Board.tile_map
-def generate_coordinate_keys (xlen: Int, ylen: Int) : IndexedSeq[(Int, Int)] = {
-  (0 until xlen).flatMap( x => (0 until ylen).map( y => (x, y) ) )
+// ** Input
+// xlen : the board's horizontal size
+// ylen : the board's vertical size
+// ** Output
+// A list of coordinates for the board
+def generate_coordinate_keys (xlen: Int, ylen: Int) : List[Coordinate] = {
+  (0 until xlen).flatMap(x => (0 until ylen).map( y => Coordinate(x, y))).toList
 }
 
-/////////////////
-//// Scratch ////
-/////////////////
 
 // @main def hello(): Unit = 
   // simulate("src/test/board_tests/4-in.json")
