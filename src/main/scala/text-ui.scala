@@ -14,11 +14,11 @@ import upickle.implicits.Readers
   var state = new_game(difficulty)
   // print_state(state)
 
-  while !game_over(state.status) do 
-    print_board(state.playerpool.current(), state.solution.num_mines)
+    while !game_over(state.status) do 
+    print_board(state.playerstate.boards(state.playerstate.current), state.solution.num_mines)
     val player_action = get_valid_inputs(state)
     val new_state = play(state, player_action)
-    print_board(new_state.playerpool.current(), state.solution.num_mines)
+    print_board(new_state.playerstate.boards(state.playerstate.current), state.solution.num_mines)
 
     val flagged_mines_revealed = new_state.status match {
       case GameStatus.Continue => None
@@ -250,13 +250,13 @@ def print_status(status: GameStatus): Unit =
   }
 
 
-def print_board(player: Player, num_mines: Int): Unit = {
+def print_board(playerboard: PlayerBoard, num_mines: Int): Unit = {
   print_inplace()
 
   print_with_effect(s"Board: Player ${player.id}", PrinterEffects.Bold)
   print_with_effect(s"Number of Mines: ${num_mines}", PrinterEffects.Bold)
 
-  player.board.print_board_for_test()
+  playerboard.print_board_for_test()
 
   Thread.sleep(1000)
 }

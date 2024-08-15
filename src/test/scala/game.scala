@@ -142,5 +142,9 @@ class GameTest extends AnyFunSuite {
     }
 
 
+    test("get_the_others") {
+      
+    }
+
 
 }

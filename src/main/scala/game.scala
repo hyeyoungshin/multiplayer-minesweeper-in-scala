@@ -2,17 +2,17 @@
 ///// Data types: Game /////
 ////////////////////////////
 
-case class GameState (val solution: Solution,         
-                      val playerpool: PlayerPool,
-                      val status: GameStatus)           
+case class GameState (solution: Solution,         
+                      playerstate: PlayerState, // players: List[Player], playerboards: List[PlayerBoards], next: Int
+                      status: GameStatus)           
 
-case class Solution(val board: SolutionBoard, val num_mines: Int)
+case class Solution(board: SolutionBoard, num_mines: Int)
 
 enum GameStatus:
-  case Win(winners: Set[Player]) // Note: List vs. Set  
+  case Win(winners: Set[PlayerID]) // Note: List vs. Set  
   case Continue
 
-case class GameDifficulty(val board_size: (Int, Int), val num_mines: Int)
+case class GameDifficulty(board_size: (Int, Int), num_mines: Int)
 
 final val Easy = GameDifficulty(board_size = (3, 3), num_mines = 2)
 final val Medium = GameDifficulty(board_size = (5, 5), num_mines = 4)
@@ -29,17 +29,27 @@ final val Hard = GameDifficulty(board_size = (7, 7), num_mines = 9)
 // * Input
 // players: the list of players in the game
 // next: the index of the current player 
-class PlayerPool(val players: List[Player], val next: Int) {
-  // Returns the current player
-  def current(): Player = players(next)
+// class PlayerPool(val current_player_states: List[PlayerState], val next: Int) {
+//   // Returns the current PlayerState
+//   def current(): PlayerState = current_player_states(next)
   
-  // Updates the player pool by incrementing the index 
-  def next_pool(): PlayerPool = PlayerPool(players, (next + 1) % players.length)
+//   // Updates the player pool by incrementing the index 
+//   def next_pool(): PlayerPool = PlayerPool(current_player_states, (next + 1) % current_player_states.length)
 
-  // Returns the players except the current player
-  // Useful for getting the winners if the current player lost
-  def get_rest(): Set[Player] = players.toSet.-(this.current())
+//   // Returns the players except the current PlayerState
+//   // Useful for getting the winners if the current player lost
+//   def get_rest(): Set[PlayerState] = current_player_states.toSet.-(this.current())
+// }
+
+case class PlayerState(players: List[Player], boards: List[PlayerBoard], current: Int) {
+  // Returns the rest of the players' ids
+  // Useful for getting the winners when current player lost the game  
+  def get_the_others(): Set[PlayerID] = players.map(player => player.id).toSet.-(players(current).id)
+  
+  // Updates playerstate for next player by incrementing the index 
+  def next(): PlayerState = this.copy(current = (current + 1) % players.length)
 }
+
 
 
 // Contains information about each player
@@ -48,11 +58,13 @@ class PlayerPool(val players: List[Player], val next: Int) {
 // id : player id
 // board : player's current board
 // color: player's flag color
-case class Player(val id: Int, val board: PlayerBoard, val color: PlayerColor)
+case class Player(id: PlayerID, color: PlayerColor)
+
+case class PlayerID(n: Int)
 
 
 // To distinguish each player's flags
-case class PlayerColor(val code: String)
+case class PlayerColor(code: String)
 
 final val Red =  PlayerColor("\u001b[31m")
 final val Blue = PlayerColor("\u001B[34m")
@@ -65,7 +77,7 @@ def player_colors(): List[PlayerColor] = List(Red, Blue)
 // * Input
 // action : one of Reveal, Flag, and Unflag
 // pos : the tile coordinate
-case class PlayerAction(val action: Action, val tile_pos: Coordinate)
+case class PlayerAction(action: Action, tile_pos: Coordinate)
 
 enum Action:
   case Reveal, Flag, Unflag
@@ -80,21 +92,22 @@ def new_game(difficulty: GameDifficulty): GameState =
   val player_board = create_playerboard(mine_board.xsize, mine_board.ysize)
 
   // number of players is fixed as 2 now
-  val playerpool = initialize_players(2, player_board)    
+  val playerstate = initialize_playerstate(2, player_board)    
   
-  GameState(solution = Solution(solution_board, difficulty.num_mines), 
-            playerpool = playerpool,
-            status = GameStatus.Continue)
+  GameState(Solution(solution_board, difficulty.num_mines), 
+            playerstate,
+            GameStatus.Continue)
             
 
-// Initializes a player pool for the new game
-// Each player is given an id starting from 0, a color, and a new playerboard
-def initialize_players(num_players: Int, player_board: PlayerBoard): PlayerPool = {
-  val players = (0 until num_players).map(n => Player(id = n, 
-                                                      board = player_board, 
+// Initializes playerstate for the new game
+// Each player is assigned an id, color, and board
+def initialize_playerstate(num_players: Int, playerboard: PlayerBoard): PlayerState = {
+  val players = (0 until num_players).map(n => Player(id = PlayerID(n), 
                                                       color = player_colors()(n))).toList
-  
-  PlayerPool(players, 0)
+
+  val playerboards = players.map(player => playerboard)
+      
+  PlayerState(players, playerboards, 0)
 }
 
 
@@ -115,19 +128,21 @@ def game_over(status: GameStatus): Boolean =
 // - If flagged all the mines, game ends
 // - Otherwise, game continues
 def play(state: GameState, player_action: PlayerAction): GameState = 
-  val current_player = state.playerpool.current()
+  val playerstate = state.playerstate
+  val current = playerstate.current
+  val current_player_id = playerstate.players(current).id
   
   state.status match {
     // play is only valid in GameStatus.Continue
     case GameStatus.Continue => {
-      val updated_playerpool = player_action.action match {
-        case Action.Reveal => update_player(state.playerpool, reveal(state.solution.board, player_action.tile_pos))
-        case Action.Flag => update_playerpool(state.playerpool, flag(current_player, player_action.tile_pos))
-        case Action.Unflag => update_playerpool(state.playerpool, unflag(current_player, player_action.tile_pos))
+      val updated_playerstate = player_action.action match {
+        case Action.Reveal => update_player(state.playerstate, reveal(state.solution.board, player_action.tile_pos))
+        case Action.Flag => update_playerstate(state.playerstate, flag(current_player_id, player_action.tile_pos))
+        case Action.Unflag => update_playerstate(state.playerstate, unflag(current_player_id, player_action.tile_pos))
       }
-      val updated_status = update_status(updated_playerpool, player_action.tile_pos, state.solution.board)
+      val updated_status = update_status(updated_playerstate, player_action.tile_pos, state.solution.board)
 
-      state.copy(playerpool = updated_playerpool, status = updated_status)
+      state.copy(playerstate = updated_playerstate, status = updated_status)
     }
 
     case _ => throw IllegalStateException("You can only play game in Continue Status.")
@@ -141,13 +156,10 @@ def play(state: GameState, player_action: PlayerAction): GameState =
 // update: a function that updates the current player's board; most likely to be `reveal`
 // * Output
 // A new playerpool with only the current player's board updated; next index unchanged
-def update_player(playerpool: PlayerPool, update: PlayerBoard => PlayerBoard): PlayerPool = {
-  val current_player_list = playerpool.players
-  val current_player = playerpool.current()
-  
-  PlayerPool(players = current_player_list.updated(playerpool.next,
-                                                   current_player.copy(board = update(current_player.board))),
-             next = playerpool.next)
+def update_player(playerstate: PlayerState, update: PlayerBoard => PlayerBoard): PlayerState = {
+  val current = playerstate.current
+
+  playerstate.copy(boards = playerstate.boards.updated(current, update(playerstate.boards(current))))
 }
 
 
@@ -158,15 +170,15 @@ def update_player(playerpool: PlayerPool, update: PlayerBoard => PlayerBoard): P
 // update: either flag or unflag
 // * Output
 // A new playerpool where all players' boards are updated; next index unchanged
-def update_playerpool(playerpool: PlayerPool, update: PlayerBoard => Option[PlayerBoard]): PlayerPool = {
-  val updated_players = playerpool.players.map(player => 
-    update(player.board) match {
-      case Some(updated_playerboard) => player.copy(board = updated_playerboard)
-      case None => player
+def update_playerstate(playerstate: PlayerState, update: PlayerBoard => Option[PlayerBoard]): PlayerState = {
+  val updated_boards = playerstate.boards.map(board => 
+    update(board) match {
+      case Some(updated_board) => updated_board
+      case None => board
     }
   )
 
-  PlayerPool(players = updated_players, next = playerpool.next)
+  playerstate.copy(boards = updated_boards)
 }
 
 
@@ -174,13 +186,13 @@ def update_playerpool(playerpool: PlayerPool, update: PlayerBoard => Option[Play
 // - If the current player revealed a mine, the rest of the players win
 // - If the current player's board satisfies the winning conditon, winners are computed
 // - Otherwise, game continues
-def update_status(updated_playerpool: PlayerPool, tile_pos: Coordinate, solution_board: SolutionBoard): GameStatus = {
-  val current_player = updated_playerpool.current()
+def update_status(playerstate: PlayerState, tile_pos: Coordinate, solution_board: SolutionBoard): GameStatus = {
+  val current_players_board = playerstate.boards(playerstate.current)
   
-  if revealed_mine(current_player.board, tile_pos) then
-    GameStatus.Win(updated_playerpool.get_rest())
-  else if all_mines_flagged(current_player.board, solution_board) then
-    GameStatus.Win(who_won(updated_playerpool, solution_board))
+  if revealed_mine(current_players_board, tile_pos) then
+    GameStatus.Win(playerstate.get_the_others())
+  else if all_mines_flagged(current_players_board, solution_board) then
+    GameStatus.Win(who_won(playerstate, solution_board))
   else
     GameStatus.Continue
 }
@@ -199,7 +211,7 @@ def revealed_mine(playerboard: PlayerBoard, pos: Coordinate): Boolean = {
 
 // Determine the winners
 // The player(s) with the most number of flags on mines win (winning condition 1)
-def who_won(playerpool: PlayerPool, solution_board: SolutionBoard): Set[Player] = {
+def who_won(playerstate: PlayerState, solution_board: SolutionBoard): Set[PlayerID] = {
   // 1. Whoever has flagged most mines win
   // val num_flagged_mines_per_player = playerpool.players.map(
   //   player => num_flagged_mines_by(player, mine_coordinates(solution_board)))
@@ -210,42 +222,44 @@ def who_won(playerpool: PlayerPool, solution_board: SolutionBoard): Set[Player] 
   // winners_indices.map(i => playerpool.players(i)).toSet
 
   // 2. Whoever has max points win (flag on mine + 1; flag on non-mine - 1)
-  val points_per_player = playerpool.players.map(player => get_points(player, mine_coordinates(solution_board)))
+  // val points_per_player = playerstate.boards.zipWithIndex.map(playerboard_i=> get_points(playerboard_i, mine_coordinates(solution_board)))  
+  val points_per_player = playerstate.boards.zipWithIndex.map((board, id) => get_points(PlayerID(id))(board, mine_coordinates(solution_board))
+  )
   val max_points = points_per_player.max
   val winners_indices = points_per_player.zipWithIndex.flatMap((points, i) => if points == max_points then Some(i) else None)
   
-  winners_indices.map(i => playerpool.players(i)).toSet
+  winners_indices.map(i => playerstate.players(i).id).toSet
 }
 
 // Computes how many flags are on mines by the player
-def num_flagged_mines_by(player: Player, mine_coordinates: Set[Coordinate]): (Int, Int) = {
-  val num_flagged_mines = mine_coordinates.foldRight(0)((pos, acc) => player.board.tile_map(pos) match {
-    case PlayerTile.Flagged(flagger) if player.id == flagger.id => acc + 1
-    case _ => acc
-  })
+// def num_flagged_mines_by(player: Player, mine_coordinates: Set[Coordinate]): (Int, Int) = {
+//   val num_flagged_mines = mine_coordinates.foldRight(0)((pos, acc) => player.board.tile_map(pos) match {
+//     case PlayerTile.Flagged(flagger) if player.id == flagger.id => acc + 1
+//     case _ => acc
+//   })
 
-  val num_all_flags = player.board.tile_map.foldRight(0)((x, acc) => x._2 match {
-    case PlayerTile.Flagged(flagger) if player.id == flagger.id => acc + 1
-    case _ => acc
-  })
+//   val num_all_flags = player.board.tile_map.foldRight(0)((x, acc) => x._2 match {
+//     case PlayerTile.Flagged(flagger) if player.id == flagger.id => acc + 1
+//     case _ => acc
+//   })
 
-  val num_flagged_non_mines = num_all_flags - num_flagged_mines
+//   val num_flagged_non_mines = num_all_flags - num_flagged_mines
 
-  (num_flagged_mines, num_flagged_non_mines)
-}
+//   (num_flagged_mines, num_flagged_non_mines)
+// }
 
 
 // Calculates points for the player
-def get_points(player: Player, mine_coordinates: Set[Coordinate]): Int = {
-  val num_all_flags = player.board.tile_map.foldRight(0)((x, acc) => x._2 match {
-    case PlayerTile.Flagged(flagger) if player.id == flagger.id => acc + 1
+def get_points(id: PlayerID)(board: PlayerBoard, mine_coordinates: Set[Coordinate]): Int = {
+  val num_all_flags = board.tile_map.foldRight(0)((x, acc) => x._2 match {
+    case PlayerTile.Flagged(flagger) if id == flagger => acc + 1
     case _ => acc
   })
 
   // println(s"num_all_flags is: ${num_all_flags}")
 
-  val num_flagged_mines = mine_coordinates.foldRight(0)((pos, acc) => player.board.tile_map(pos) match {
-    case PlayerTile.Flagged(flagger) if player.id == flagger.id => acc + 1
+  val num_flagged_mines = mine_coordinates.foldRight(0)((pos, acc) => board.tile_map(pos) match {
+    case PlayerTile.Flagged(flagger) if id == flagger => acc + 1
     case _ => acc
   })
 
@@ -292,15 +306,15 @@ def all_mines_flagged(player_board: PlayerBoard, solution_board: SolutionBoard):
 /* Counts how many flags are placed on non-mines by each player 
    Used to determine winner
 */
-def num_flagged_non_mines_per_player(playerpool: PlayerPool, solution_board: SolutionBoard): List[Int] = {
-  playerpool.players.map(
-      player => player.board.tile_map.foldRight(0)((x, z) => x._2 match {
-          case PlayerTile.Flagged(flagger) if player.id == flagger.id && !is_mine(x._1, solution_board)  => z + 1
-          case _ => z
-        } // match
-      ) // foldRight
-    ) // map
-}
+// def num_flagged_non_mines_per_player(playerpool: PlayerPool, solution_board: SolutionBoard): List[Int] = {
+//   playerpool.players.map(
+//       player => player.board.tile_map.foldRight(0)((x, z) => x._2 match {
+//           case PlayerTile.Flagged(flagger) if player.id == flagger.id && !is_mine(x._1, solution_board)  => z + 1
+//           case _ => z
+//         } // match
+//       ) // foldRight
+//     ) // map
+// }
 
 
 def is_mine(pos: Coordinate, solution_board: SolutionBoard): Boolean = {
@@ -309,7 +323,7 @@ def is_mine(pos: Coordinate, solution_board: SolutionBoard): Boolean = {
 
 
 // Updates the game state by setting the next player's index
-def next_player(state: GameState): GameState = state.copy(playerpool = state.playerpool.next_pool())
+def next_player(state: GameState): GameState = state.copy(playerstate = state.playerstate.next())
 
 
 

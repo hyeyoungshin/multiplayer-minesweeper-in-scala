@@ -70,8 +70,8 @@ enum SolutionTile:
 enum PlayerTile:
   case Hidden
   case Revealed (tile: SolutionTile)
-  case Flagged (flagger: Player)
-  case RevealedNFlagged(tile: SolutionTile, flagger: Player)
+  case Flagged (flagger: PlayerID)
+  case RevealedNFlagged(tile: SolutionTile, flagger: PlayerID)
                                                   
 
 
@@ -266,9 +266,9 @@ def reveal_all_mines(solution_board: SolutionBoard, player_board: PlayerBoard): 
 // * Output
 // Some board if the tile was hidden (the only valid case)
 // None, otherwise
-def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
+def flag(flagger: PlayerID, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile.Hidden => Some(update_player_board(playerboard, pos, PlayerTile.Flagged(by)))
+    case PlayerTile.Hidden => Some(update_player_board(playerboard, pos, PlayerTile.Flagged(flagger)))
     case _ => None // should not reach this case
   }
 }  
@@ -283,9 +283,9 @@ def flag(by: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBo
 // * Output
 // Some board if the tile was flagged by the player
 // None, otherwise
-def unflag(player: Player, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
+def unflag(id: PlayerID, pos: Coordinate)(playerboard: PlayerBoard): Option[PlayerBoard] = {
   playerboard.tile_map(pos) match {
-    case PlayerTile.Flagged(by) if by.id == player.id => Some(update_player_board(playerboard, pos, PlayerTile.Hidden))
+    case PlayerTile.Flagged(flagger) if flagger == id => Some(update_player_board(playerboard, pos, PlayerTile.Hidden))
     case PlayerTile.RevealedNFlagged(s_tile, _) => Some(update_player_board(playerboard, pos, PlayerTile.Revealed(s_tile)))
     case _ => None
   }
