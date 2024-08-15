@@ -258,7 +258,7 @@ def print_board(player: Player, num_mines: Int): Unit = {
 
   player.board.print_board_for_test()
 
-  Thread.sleep(500)
+  Thread.sleep(1000)
 }
 
 
@@ -272,7 +272,7 @@ def tile_to_string[T](tile: T): String = tile match {
     case PlayerTile.Hidden => "[   ]"
     case PlayerTile.Flagged(flagger) => s"[ ${flagger.color.code}F${PrinterEffects.Reset} ]"
     case PlayerTile.Revealed(s_tile) => s"[ ${tile_to_string(s_tile)} ]"
-    case PlayerTile.RevealedNFlagged(s_tile, flagger) => s"[ ${tile_to_string(s_tile)}|${flagger.color.code}F${PrinterEffects.Reset} ]"
+    case PlayerTile.RevealedNFlagged(s_tile, flagger) => s"[${tile_to_string(s_tile)}|${flagger.color.code}F${PrinterEffects.Reset}]"
   }
   case t: Boolean => t match {
     case true => "[*]" // mine
