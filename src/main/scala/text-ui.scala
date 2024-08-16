@@ -15,14 +15,14 @@ import upickle.implicits.Readers
   // print_state(state)
 
   while !game_over(state.status) do 
-    print_board(state.playerpool.current(), state.solution.num_mines)
+    print_board(state.playerpool.current_playerstate(), state.solution.num_mines)
     val player_action = get_valid_inputs(state)
     val new_state = play(state, player_action)
-    print_board(new_state.playerpool.current(), state.solution.num_mines)
+    print_board(new_state.playerpool.current_playerstate(), state.solution.num_mines)
 
     val flagged_mines_revealed = new_state.status match {
       case GameStatus.Continue => None
-      case GameStatus.Win(_) => Some(reveal_all_mines(state.solution.board, new_state.playerpool.current().board))
+      case GameStatus.Win(_) => Some(reveal_all_mines(state.solution.board, new_state.playerpool.current_playerboard()))
     }
     
     flagged_mines_revealed match {
@@ -100,7 +100,7 @@ def parse_difficulty(user_input: String): Either[String, GameDifficulty] = {
 // Coordinate //
 ////////////////
 def get_valid_coordinate(state: GameState): Coordinate = {
-  val current_player = state.playerpool.current()
+  val current_player = state.playerpool.current_player()
 
   get_valid_input(message = s"Player ${current_player.id}, enter a tile position:",
                   parse_and_validate = input => parse_coordinate(input).flatMap(x => valid_coordinate(state, x)))
@@ -133,9 +133,9 @@ user input coordinate is valid when it is within board boundary AND
 the tile at input coordinate is not revealed
  */
 def valid_coordinate(state: GameState, tile_pos: Coordinate): Either[String, Coordinate] = 
-  val current_player = state.playerpool.current()
-  if current_player.board.within_boundary(tile_pos) then
-    current_player.board.tile_map(tile_pos) match {
+  val current_playerboard = state.playerpool.current_playerboard()
+  if current_playerboard.within_boundary(tile_pos) then
+    current_playerboard.tile_map(tile_pos) match {
       case PlayerTile.Revealed(_) => Left("The tile is alreay revealed.")
       case PlayerTile.RevealedNFlagged(_, _) => Left("The tile is alreay revealed.")
       case _ => Right(tile_pos)
@@ -163,8 +163,9 @@ def parse_action(input: String): Either[String, Action] =
 
 
 def valid_player_action(state: GameState, player_action: PlayerAction): Either[String, PlayerAction] = {
-  val current_player = state.playerpool.current()
-  val p_tile = current_player.board.tile_map(player_action.tile_pos)
+  val current_player = state.playerpool.current_player()
+  val current_playerboard = state.playerpool.current_playerboard()
+  val p_tile = current_playerboard.tile_map(player_action.tile_pos)
   
 
   player_action.action match {
@@ -182,8 +183,8 @@ def valid_player_action(state: GameState, player_action: PlayerAction): Either[S
     
     case Action.Reveal => p_tile match {
       case PlayerTile.Hidden => Right(player_action) 
-      case PlayerTile.Flagged(by) =>
-        if by.id != current_player.id then 
+      case PlayerTile.Flagged(flagger) =>
+        if current_player != flagger then 
           Right(player_action) // you can reveal a tile flagged by another player
         else
           Left(s"The tile is already flagged.")
@@ -193,7 +194,7 @@ def valid_player_action(state: GameState, player_action: PlayerAction): Either[S
     
     case Action.Unflag => p_tile match {
       case PlayerTile.Flagged(flagger) => 
-        if flagger.id == current_player.id then
+        if current_player == flagger then
           Right(player_action)
         else
           Left(s"The tile is already flagged by Player ${flagger.id}.") 
@@ -238,7 +239,7 @@ def print_difficulty(difficulty: GameDifficulty): Unit = {
 
 
 def print_state(state: GameState): Unit = {
-  print_board(state.playerpool.current(), state.solution.num_mines)
+  print_board(state.playerpool.current_playerstate(), state.solution.num_mines)
   print_status(state.status)
 }
 
@@ -250,13 +251,13 @@ def print_status(status: GameStatus): Unit =
   }
 
 
-def print_board(player: Player, num_mines: Int): Unit = {
+def print_board(playerstate: PlayerState, num_mines: Int): Unit = {
   print_inplace()
 
-  print_with_effect(s"Board: Player ${player.id}", PrinterEffects.Bold)
+  print_with_effect(s"Board: Player ${playerstate.player.id}", PrinterEffects.Bold)
   print_with_effect(s"Number of Mines: ${num_mines}", PrinterEffects.Bold)
 
-  player.board.print_board_for_test()
+  playerstate.board.print_board_for_test()
 
   Thread.sleep(1000)
 }
