@@ -16,20 +16,23 @@ import upickle.implicits.Readers
 
   while !game_over(state.status) do 
     print_board(state.playerpool.current_playerstate(), state.solution.num_mines)
+    
     val player_action = get_valid_inputs(state)
     val new_state = play(state, player_action)
-    print_board(new_state.playerpool.current_playerstate(), state.solution.num_mines)
-
-    val flagged_mines_revealed = new_state.status match {
-      case GameStatus.Continue => None
-      case GameStatus.Win(_) => Some(reveal_all_mines(state.solution.board, new_state.playerpool.current_playerboard()))
-    }
     
-    flagged_mines_revealed match {
-      case Some(board) => board.print_board_for_test()
-      case None => ()
+    print_board(new_state.playerpool.current_playerstate(), new_state.solution.num_mines)
+
+    val mines_revealed = reveal_flagged_mines(new_state)
+    
+    val new_playerpool = mines_revealed match {
+      case Some(board) => update_player(new_state.playerpool, x => board)
+      case None => new_state.playerpool
     }
+
+    print_board(new_playerpool.current_playerstate(), new_state.solution.num_mines)
+
     print_status(new_state.status)
+    
     state = next_player(new_state)
     
 
