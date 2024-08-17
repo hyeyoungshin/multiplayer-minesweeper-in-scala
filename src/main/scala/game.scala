@@ -330,6 +330,12 @@ def is_mine(pos: Coordinate, solution_board: SolutionBoard): Boolean = {
 }
 
 
+def reveal_flagged_mines(state: GameState): Option[PlayerBoard] = state.status match {
+  case GameStatus.Win(_) => Some(reveal_all_mines(state.solution.board, state.playerpool.current_playerboard()))
+  case GameStatus.Continue => None
+}
+
+
 // Updates the game state by setting the next player's index
 def next_player(state: GameState): GameState = state.copy(playerpool = state.playerpool.next_pool())
 
