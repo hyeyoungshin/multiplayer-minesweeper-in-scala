@@ -15,27 +15,22 @@ import upickle.implicits.Readers
   // print_state(state)
 
   while !game_over(state.status) do 
+    // before making a move print a board
     print_board(state.playerpool.current_playerstate(), state.solution.num_mines)
-    
+    // get move
     val player_action = get_valid_inputs(state)
+    // play
     val new_state = play(state, player_action)
-    
+    // after move print a board
     print_board(new_state.playerpool.current_playerstate(), new_state.solution.num_mines)
-
-    val mines_revealed = reveal_flagged_mines(new_state)
-    
-    val new_playerpool = mines_revealed match {
-      case Some(board) => update_player(new_state.playerpool, x => board)
-      case None => new_state.playerpool
-    }
-
-    print_board(new_playerpool.current_playerstate(), new_state.solution.num_mines)
-
-    print_status(new_state.status)
-    
+    // evaluate 
+    val evaluated = evaluate_state(new_state) // TODO: this should be outside the game loop
+    // report
+    print_state(evaluated)
+    // ready for next player
     state = next_player(new_state)
     
-
+  // TODO: combine reveal mine cases  (1, hit a mine 2, flagging all mines)
 
 //////////////////////////////////
 ////// Game Start and Setup //////
@@ -118,7 +113,7 @@ def parse_coordinate(user_input: String): Either[String, Coordinate] =
   val option_parsed = parse_coordinate_helper(user_input)
   option_parsed.filter(arr => arr.length == 2) match {
     case Some(arr) => Right(convert_input_coordinate_to_coordinate(InputCoordinate(arr(0), arr(1))))
-    case None => Left("The tile pos is in wrong format.")
+    case None => Left("The coordinate you entered is in wrong format.")
   }
 
 

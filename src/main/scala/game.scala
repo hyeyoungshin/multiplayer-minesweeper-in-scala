@@ -329,7 +329,19 @@ def is_mine(pos: Coordinate, solution_board: SolutionBoard): Boolean = {
   mine_coordinates(solution_board).contains(pos) // Set[Option[Coordinate]]
 }
 
+// TODO: redo
+def evaluate_state(state: GameState): GameState = {
+  val mines_revealed = reveal_flagged_mines(state)
+      
+  val new_playerpool = mines_revealed match {
+    case Some(board) => update_player(state.playerpool, x => board)
+    case None => state.playerpool
+  }
 
+  state.copy(playerpool = new_playerpool)
+}
+
+// TODO: redo
 def reveal_flagged_mines(state: GameState): Option[PlayerBoard] = state.status match {
   case GameStatus.Win(_) => Some(reveal_all_mines(state.solution.board, state.playerpool.current_playerboard()))
   case GameStatus.Continue => None
