@@ -149,15 +149,14 @@ class GameTest extends AnyFunSuite {
                               GameStatus.Continue)
     val player_0_action = PlayerAction(Action.Flag, Coordinate(1,1))
     val state_1 = play(state_0, player_0_action)
-    state_1.playerpool.current_playerboard().print_board_for_test()
+    print_board(state_1.playerpool.current_playerboard())
     // [ ][ ][ ]
     // [ ][F][ ]
     // [ ][ ][ ]
     val state_2 = next_player(state_1)
     val player_1_action = PlayerAction(Action.Reveal, Coordinate(2, 0))
     val state_3 = play(state_2, player_1_action)
-    state_3.playerpool.current_playerboard().print_board_for_test()
-    
+    print_board(state_3.playerpool.current_playerboard())
   }
 
 }

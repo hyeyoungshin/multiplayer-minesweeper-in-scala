@@ -16,7 +16,7 @@ case class Board[Tile] (val xsize: Int, val ysize: Int, val tile_map: Map[Coordi
   // [][][]
   // [][][]
   // [][][]
-  // (3,1) is not withint the boundary of the above board
+  // Coordinate(3,1) is not withint the boundary of the above board
   // * Input
   // tile_pos: a coordinate to check
   // * Output
@@ -42,17 +42,6 @@ case class Board[Tile] (val xsize: Int, val ysize: Int, val tile_map: Map[Coordi
     
     all_neighbors.filter(tile_pos => this.within_boundary(tile_pos))
   }
-
-  // Prints a board for testing purposes
-  // i.e., for mines located at (Coordinate(0, 1), Coordinate(1, 2)), it prints out
-  // [ ][ ][]
-  // [*][ ][]
-  // [ ][*][]
-  def print_board_for_test(): Unit = {
-    val str_board = Array.fill(this.xsize)(Array.fill(this.ysize)(""))
-    this.tile_map.map((tile_pos, tile) => str_board(tile_pos.y)(tile_pos.x) = tile_to_string(tile))
-    print_as_matrix[String](str_board)
-  } 
 }
 
 // The three types of the boards to make the game work
@@ -347,6 +336,7 @@ def generate_coordinate_keys (xlen: Int, ylen: Int) : List[Coordinate] = {
 }
 
 
+// TODO: add test runner with json files
 // @main def hello(): Unit = 
   // simulate("src/test/board_tests/4-in.json")
 

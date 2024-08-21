@@ -16,13 +16,13 @@ import upickle.implicits.Readers
 
   while !game_over(state.status) do 
     // before making a move print a board
-    print_board(state.playerpool.current_playerstate(), state.solution.num_mines)
+    print_board_with_extra(state.playerpool.current_playerstate(), state.solution.num_mines)
     // get move
     val player_action = get_valid_inputs(state)
     // play
     val new_state = play(state, player_action)
     // after move print a board
-    print_board(new_state.playerpool.current_playerstate(), new_state.solution.num_mines)
+    print_board_with_extra(new_state.playerpool.current_playerstate(), new_state.solution.num_mines)
     // evaluate 
     val evaluated = evaluate_state(new_state) // TODO: this should be outside the game loop
     // report
@@ -237,7 +237,7 @@ def print_difficulty(difficulty: GameDifficulty): Unit = {
 
 
 def print_state(state: GameState): Unit = {
-  print_board(state.playerpool.current_playerstate(), state.solution.num_mines)
+  print_board_with_extra(state.playerpool.current_playerstate(), state.solution.num_mines)
   print_status(state.status)
 }
 
@@ -248,14 +248,26 @@ def print_status(status: GameStatus): Unit =
     case GameStatus.Continue => ()
   }
 
+def print_board(board: PlayerBoard): Unit = {
+  val str_board = Array.fill(board.xsize)(Array.fill(board.ysize)(""))
+  board.tile_map.map((tile_pos, tile) => str_board(tile_pos.y)(tile_pos.x) = tile_to_string(tile))
+  print_as_matrix[String](str_board)
+}
 
-def print_board(playerstate: PlayerState, num_mines: Int): Unit = {
+
+// Prints a board for testing purposes
+// i.e., for mines located at (Coordinate(0, 1), Coordinate(1, 2)), it prints out
+// [ ][ ][]
+// [*][ ][]
+// [ ][*][]
+def print_board_with_extra(playerstate: PlayerState, num_mines: Int): Unit = {
+  // prints boilder plate
   print_inplace()
 
   print_with_effect(s"Board: Player ${playerstate.player.id}", PrinterEffects.Bold)
   print_with_effect(s"Number of Mines: ${num_mines}", PrinterEffects.Bold)
 
-  playerstate.board.print_board_for_test()
+  print_board(playerstate.board)
 
   Thread.sleep(1000)
 }
