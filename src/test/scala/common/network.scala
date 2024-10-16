@@ -29,6 +29,15 @@ class Network extends AnyFunSuite {
         assert(write_and_read(TestGuess(10)).guess == 10)
     }
 
+    test("write two objects then read two objects") {
+        val out = new ByteArrayOutputStream()
+        send_data(out, TestGuess(10))
+        send_data(out, TestGuess(9))
+        val in = new ByteArrayInputStream(out.toByteArray)
+        assert(read_data[TestGuess](in).guess == 10)
+        assert(read_data[TestGuess](in).guess == 9)
+    }
+
     test("from-file") {
         val data_location = "src/test/json/number-guessing/guess.json"
         val data = read_from_file[TestGuess](data_location)
