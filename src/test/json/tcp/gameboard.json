@@ -1,0 +1,10 @@
+{"$type": "GameBoard",
+ "width": 2, 
+ "height": 2,
+ "tile_matrix": [
+    [{"hint": [], "flagged_by": [], "is_mine": false}, 
+     {"hint": [], "flagged_by": [], "is_mine": false}],
+    [{"hint": [], "flagged_by": [], "is_mine": false},
+     {"hint": [0], "flagged_by": [0], "is_mine": false}]
+ ]
+}

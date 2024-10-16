@@ -13,8 +13,8 @@ class GameTest extends AnyFunSuite {
   val solution_board = create_solutionboard(mineboard)
 
   val playerboard = create_playerboard(3, 3)
-  val player_0 = Player(0, Red)
-  val player_1 = Player(1, Blue)
+  val player_0 = Player(0)
+  val player_1 = Player(1)
   val playerpool = PlayerPool(List(PlayerState(player_0, playerboard), PlayerState(player_1, playerboard)), 0)
   val solution = Solution(solution_board, 2)
 /*

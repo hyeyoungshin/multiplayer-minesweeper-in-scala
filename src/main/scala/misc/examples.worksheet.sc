@@ -4,3 +4,6 @@ for {
     i <- (0 until 3)
     j <- (0 until 3)
 } yield (i , j)
+
+val x = List(1,2,3).filter(_> 1)
+

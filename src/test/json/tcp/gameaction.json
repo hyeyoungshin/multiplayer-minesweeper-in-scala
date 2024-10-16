@@ -1,0 +1,4 @@
+{"$type": "GameAction",
+ "tile_pos": {"row": 1, "column": 1}, 
+ "action": "R"
+}

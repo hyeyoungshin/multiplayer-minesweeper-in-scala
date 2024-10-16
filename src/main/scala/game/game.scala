@@ -1,3 +1,7 @@
+import PrinterEffects.Red
+import PrinterEffects.Blue
+import upickle.default.*
+
 ////////////////////////////
 ///// Data types: Game /////
 ////////////////////////////
@@ -61,17 +65,21 @@ case class PlayerState(player: Player, board: PlayerBoard)
 // * Input
 // id : an int value starting from 0
 // color: the player's unique flag color
-case class Player(id: Int, color: PlayerColor)
-
-
-// To identify ownership of flags
-case class PlayerColor(val code: String)
-
-final val Red =  PlayerColor("\u001b[31m")
-final val Blue = PlayerColor("\u001B[34m")
-
-// Gets all player colors
-def player_colors(): List[PlayerColor] = List(Red, Blue)
+case class Player(id: Int): 
+  import io.AnsiColor._
+  
+  // To identify ownership of flags
+  def get_color(): String = {
+    id match {
+      case 0 => RED
+      case 1 => GREEN
+      case 2 => YELLOW
+      case 3 => BLUE
+      case 4 => MAGENTA
+      case 5 => CYAN
+      case _ => throw IllegalStateException("Maximum number of players is 6.")
+    }
+  }
 
 
 // Provides a way to check validity of an action in combination with the coordinate
@@ -103,7 +111,7 @@ def new_game(difficulty: GameDifficulty): GameState =
 // Creates a new player pool for a new game
 // Each player is given an id starting from 0, a color, and a new playerboard
 def create_playerpool(num_players: Int, playerboard: PlayerBoard): PlayerPool = {
-  val players = (0 until num_players).map(n => Player(id = n, color = player_colors()(n))).toList
+  val players = (0 until num_players).map(n => Player(id = n)).toList
   val playerstates = players.map(player => PlayerState(player, playerboard))
 
   PlayerPool(playerstates, 0)
@@ -210,20 +218,12 @@ def revealed_mine(playerboard: PlayerBoard, pos: Coordinate): Boolean = {
 }
 
 
-
 // Determine the winners
-// The player(s) with the most number of flags on mines win (winning condition 1)
+// Triggered by flagging all mines
+// You win if you have the most points
+// +1 for a correctly placed flag (on a mine)
+// -1 for an incorrectly placed flag
 def who_won(playerpool: PlayerPool, solution_board: SolutionBoard): Set[Player] = {
-  // 1. Whoever has flagged most mines win
-  // val num_flagged_mines_per_player = playerpool.players.map(
-  //   player => num_flagged_mines_by(player, mine_coordinates(solution_board)))
-  // val max_num_flags = num_flagged_mines_per_player.max
-  // val winners_indices = num_flagged_mines_per_player.zipWithIndex.flatMap(
-  //   (num_flags, i) => if num_flags == max_num_flags then Some(i) else None)
-  
-  // winners_indices.map(i => playerpool.players(i)).toSet
-
-  // 2. Whoever has max points win (flag on mine + 1; flag on non-mine - 1)
   val players = playerpool.get_players()
 
   val points_per_player = playerpool.playerstates.map(playerstate => get_points(playerstate, mine_coordinates(solution_board)))
@@ -233,7 +233,12 @@ def who_won(playerpool: PlayerPool, solution_board: SolutionBoard): Set[Player] 
   winners_indices.map(i => players(i)).toSet
 }
 
-// Computes how many flags are on mines by the player
+// Computes how many flags are correctly and incorrectly placed by a player
+// * Input
+// playerstate: contains player and playerboard info
+// mine_coordinates: set of coordinates where mines are
+// * Output
+// (number of correctly placed flags, number of incoordctly placed flags)
 def num_flagged_mines_by(playerstate: PlayerState, mine_coordinates: Set[Coordinate]): (Int, Int) = {
   val player = playerstate.player 
   val board = playerstate.board 
@@ -264,38 +269,26 @@ def get_points(playerstate: PlayerState, mine_coordinates: Set[Coordinate]): Int
     case _ => acc
   })
 
-  // println(s"num_all_flags is: ${num_all_flags}")
-
   val num_flagged_mines = mine_coordinates.foldRight(0)((pos, acc) => board.tile_map(pos) match {
     case PlayerTile.Flagged(flagger) if player == flagger => acc + 1
     case _ => acc
   })
 
-  // println(s"num_flagged_mines is: ${num_flagged_mines}")
-
   val num_flagged_non_mines = num_all_flags - num_flagged_mines
 
-  // println(s"num_flagged_non_mines is: ${num_flagged_non_mines}")
-  // println(s"points: ${num_flagged_mines - num_flagged_non_mines}")
 
   num_flagged_mines - num_flagged_non_mines
 }
 
 
-/* Returns the list of mine Coordinates. */
+// Returns the list of coordinates where mines are
 def mine_coordinates(solution_board: SolutionBoard): Set[Coordinate] = {
   solution_board.tile_map.filter((_, s_tile) => s_tile == SolutionTile.Mine).keys.toSet
-  // solution_board.tile_map.flatMap(x => x._2 match {
-  //     case SolutionTile.Mine => Some(x._1)
-  //     case _ => None
-  //   }
-  // ).toSet
-
-  // use flatMap here or flatten later
 }
 
 
-/* Checks whether all mines are flagged */
+// Checks whether all mines are flagged
+// Game is over and winners are decided once all mines are flagged
 def all_mines_flagged(player_board: PlayerBoard, solution_board: SolutionBoard): Boolean = {
   val mines = mine_coordinates(solution_board)
 
@@ -311,201 +304,35 @@ def all_mines_flagged(player_board: PlayerBoard, solution_board: SolutionBoard):
 }
 
 
-/* Counts how many flags are placed on non-mines by each player 
-   Used to determine winner
-*/
-// def num_flagged_non_mines_per_player(playerpool: PlayerPool, solution_board: SolutionBoard): List[Int] = {
-//   playerpool.players.map(
-//       player => player.board.tile_map.foldRight(0)((x, z) => x._2 match {
-//           case PlayerTile.Flagged(flagger) if player.id == flagger.id && !is_mine(x._1, solution_board)  => z + 1
-//           case _ => z
-//         } // match
-//       ) // foldRight
-//     ) // map
-// }
-
-
+// Checks the tile at the coordinate is a mine
 def is_mine(pos: Coordinate, solution_board: SolutionBoard): Boolean = {
   mine_coordinates(solution_board).contains(pos) // Set[Option[Coordinate]]
 }
 
-// TODO: redo
-def evaluate_state(state: GameState): GameState = {
-  val mines_revealed = reveal_flagged_mines(state)
-      
-  val new_playerpool = mines_revealed match {
-    case Some(board) => update_player(state.playerpool, x => board)
-    case None => state.playerpool
-  }
-
-  state.copy(playerpool = new_playerpool)
-}
-
-// TODO: redo
-def reveal_flagged_mines(state: GameState): Option[PlayerBoard] = state.status match {
-  case GameStatus.Win(_) => Some(reveal_all_mines(state.solution.board, state.playerpool.current_playerboard()))
-  case GameStatus.Continue => None
-}
 
 
-// Updates the game state by setting the next player's index
+// Updates the game state by setting the current player's index to be next
 def next_player(state: GameState): GameState = state.copy(playerpool = state.playerpool.next_pool())
 
 
-
-/* In general, player wins if they find all mines by placing flags and avoiding revealing mines
-
-There could be two scenarios:
-  1. wins flags are only placed on mines (if there are flags on non-mine tiles, you need to unflag them to win)
-  2. wins as soon as all mines are flagged (flags can be placed on non-mine tiles but there is penalty for that)
-     or all non-mine tiles revealed
-
-SolutionBoard Ex: 
-((0, 0) -> SolutionTile.Mine), ((0, 1) -> SolutionTile.Hint(2)), ((0, 2) -> SolutionTile.Empty) ...
-
-PlayerBoard Ex:
-(((0, 0) -> PlayerTile(Some(SolutionTile.Mine)), None), 
-((0, 1) -> PlayerTile(None, Some(PlayerID(1))), 
-((0, 2) -> PlayerTile(Some(SolutionTile.Empty)), None) ...)
-*/
-// def all_mines_flagged_by(player: Player, solution_board: SolutionBoard): Boolean = {
-//   // locate all the mines in solution board
-//   val mines = solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
-//   // all and only the mines are flagged by a player
-//   mines.foldRight(true)((x, b) => player.board.tile_map(x._1) match {
-//     case PlayerTile.Flagged(by) if by.id == player.id => true && b
-//     case _ => false && b
-//   })
-// }
-
-// Example:
-// [   ][   ][x|F]
-// [ F ][x|F][   ]
-// [   ][   ][   ]
-// Once all_mines_flagged
-//    there are two ways to win
-//    1. leave flags only on the mines => has_won_1
-//    2. stop here, and compute points => has_won_2
-
-//    all of them are player 0
-//    one of flags on mine is by player 1
-//    flag on non mine is by player 1
-//    flag on non mine is by player 0
+// updates players' boards by revealing all mines
+// When this is called, the winners have already been decided
+def update_with_result(state: GameState): GameState = {
+  // 1. update every player's board by revealing all mines
+  val all_mines_revealed = state.playerpool.playerstates.map(playerstate => 
+    reveal_all_mines(state.solution.board, playerstate.board))
+  // 2. update playerstates with the updated boards
+  val last_playerstates = state.playerpool.playerstates.map(playerstate => 
+    playerstate.copy(board = all_mines_revealed(playerstate.player.id)))
+  // 3. update playerpool with the updated playerstates
+  val last_playerpool = state.playerpool.copy(playerstates = last_playerstates)
+  // 4. lastly, update the state with the updated playerpool
+  state.copy(playerpool = last_playerpool)
+}
 
 
 
-
-
-  // val all_flagged_pos_per_player = playerpool.players.map(player => 
-  //     player.board.tile_map.map(x => x._2 match {
-  //       case PlayerTile.Flagged(_) => Some(x._1)
-  //       case PlayerTile.RNF(_, _) => Some(x._1)
-  //        case _ => None
-  //     }//match
-  //   ).toSet//inner map ->  Set[Option[Coordinate]]
-  // )        //outer map ->  List[Set[Option[Coordinate]]]
-  
-  // val all_mine_pos = solution_board.tile_map.map(x => x._2 match {
-  //     case SolutionTile.Mine => Some(x._1)
-  //     case _ => None
-  //   }
-  // ).toSet // Set[Option[Coordinate]]
-
-  // val all_flagged_pos_per_player.map(set_of_flagged_pos => 
-  //   if set_of_flagged_pos == all_mine_pos then
-  //     1
-  //   else 
-  //     0
-  //   )
-
-  //   GameStatus.Continue
-
-  // if all_flagged_pos == all_mine_pos then
-  //   GameStatus.Win(who_won(playerpool))
-  // elseflagger
-  //   GameStatus.Continue
-
-
-
-  // equality types:
-  // reference equality
-  // data equlity -> case class
-
-  // note: think about how data might be ordered in a data structure in the language
-  
-
-  // if num_all_flags_by(player) == num_mines then
-  //   GameStatus.Win(player)
-  // else if player.board.tile_map.foldRight(0)((x, z) => if x._2 == PlayerTile.Hidden then z + 1 else z) == 0 then
-  //   GameStatus.Continue // there still are tiles to reveal or flags to unflag
-  // else if num_flags_by(player, true, solution_board) > num_mines / 2 then 
-  //   GameStatus.Win(player)
-  // else
-  //   GameStatus.Lose(player)
-
-
-// Precondition: all the mines are flagged by `player`
-// then we stop and calculate points
-// + 1 for flags on mines
-// - 1 for flags on non-mines
-// def has_won_2(solution_board: SolutionBoard, players: List[Player]): GameStatus = {
-//   val points = players.map(player => 
-//     num_flags_by(player, true, solution_board) - num_flags_by(player, false, solution_board))
-
-//   GameStatus.Win(players(points.indexOf(points.max)))
-// }
-
-
-/* 
-Calculates the number of all flags including flags placed by other players 
-*/
-// def num_all_flags_by(player: Player): Int = {
-//   player.board.tile_map.foldRight(0)((x, z) => x._2 match {
-//     case PlayerTile.Flagged(flagger) if player.id == flagger.id => z + 1
-//     case _ => z
-//   })
-// }
-
-
-/* 
-`for_mine` = true :  calculates the number of flagged mines -> + 1
-`for_mine` = false : calcultaes the number of non-mine tiles that are flagged -> - 1
- */
-// TODO: need better name or remove boolean flag arg
-// def num_flags_by(player: Player, for_mine: Boolean, solution_board: SolutionBoard): Int = {
-//   val s_tiles = // either mines or non-mines (hint, empty)
-//     if for_mine then
-//       solution_board.tile_map.filter((pos, s_tile) => s_tile == SolutionTile.Mine)
-//     else
-//       solution_board.tile_map.filter((pos, s_tile) => s_tile != SolutionTile.Mine)
-
-//   s_tiles.foldRight(0)((x, z) => player.board.tile_map(x._1) match {
-//     case PlayerTile.Flagged(flagger) if player.id == flagger.id => z + 1
-//     // case PlayerTile.RNF(_, by) if by == player.id => z + 1
-//     // case Some(id) if player.id == id => z + 1
-//     case _ => z
-//   })
-// }
-
-
-// TODO: maybe I need to implement what == means for PlayerTile
-// def num_flags_by_tile(player: Player, player_tile: PlayerTile, solution_board: SolutionBoard): Int = {
-//   player.board.tile_map.foldRight(0)((x, z) => if x._2 == player_tile then z + 1 else z)
-// }
-
-
-// def num_flags_not_on_mines(solution_board: SolutionBoard, player: Player): Int = {
-//   val non_mines = solution_board.tile_map.filter((pos, s_tile) => s_tile != SolutionTile.Mine)
-
-//   non_mines.foldRight(0)((x, z) => player.board.tile_map(x._1).flagged_by match {
-//     case Some(id) if player.id == id => z + 1
-//     case _ => z
-//   })
-// }
-
-
-
-// Note:
+// Notes:
 // Separate Game(model) and text ui(view).
 // Game - Coordinate || text ui - InputCoordinate
 // To clean up, we rebuilt via Metals

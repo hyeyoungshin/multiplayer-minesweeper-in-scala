@@ -208,7 +208,7 @@ def reveal(solution_board: SolutionBoard, tile_pos: Coordinate)(player_board: Pl
   
   solution_tile match {
     case SolutionTile.Empty => reveal_neighbors(solution_board, updated_board, tile_pos)
-    case SolutionTile.Mine => reveal_all_mines(solution_board, updated_board)
+    case SolutionTile.Mine => updated_board //reveal_all_mines(solution_board, updated_board)
     case SolutionTile.Hint(_) => updated_board // no further action required
   }
 }

@@ -16,21 +16,25 @@ import upickle.implicits.Readers
 
   while !game_over(state.status) do 
     // before making a move print a board
-    print_board_with_extra(state.playerpool.current_playerstate(), state.solution.num_mines)
+    print_playerstate(state.playerpool.current_playerstate(), state.solution.num_mines)
     // get move
     val player_action = get_valid_inputs(state)
     // play
     val new_state = play(state, player_action)
     // after move print a board
-    print_board_with_extra(new_state.playerpool.current_playerstate(), new_state.solution.num_mines)
+    print_playerstate(new_state.playerpool.current_playerstate(), new_state.solution.num_mines)
     // evaluate 
-    val evaluated = evaluate_state(new_state) // TODO: this should be outside the game loop
+    // val evaluated = evaluate_state(new_state) // TODO: this should be outside the game loop
     // report
-    print_state(evaluated)
+    // print_state(evaluated)
     // ready for next player
     state = next_player(new_state)
-    
-  // TODO: combine reveal mine cases  (1, hit a mine 2, flagging all mines)
+
+  // here, state.status is Win(winners) by 1. revealed a mine 2. all mines are flagged
+  val result = update_with_result(state)
+
+  print_state(result)
+
 
 //////////////////////////////////
 ////// Game Start and Setup //////
@@ -207,6 +211,15 @@ def valid_player_action(state: GameState, player_action: PlayerAction): Either[S
 //////////////
 // Printers //
 //////////////
+// object AnsiColor:
+//   val Red = "\u001b[31m"
+//   val Green = "\u001b[32m"
+//   val Yellow = "\u001b[33m"
+//   val Blue = "\u001b[34m"
+//   val Magenta = "\u001b[35m"
+//   val Cyan = "\u001b[36m"
+
+
 object PrinterEffects:
   val Red = "\u001b[31m"
   val Blue = "\u001B[34m"
@@ -237,8 +250,31 @@ def print_difficulty(difficulty: GameDifficulty): Unit = {
 
 
 def print_state(state: GameState): Unit = {
-  print_board_with_extra(state.playerpool.current_playerstate(), state.solution.num_mines)
+  state.playerpool.playerstates.map(playerstate => {
+    print_with_effect(s"Board: Player ${playerstate.player.id}", PrinterEffects.Bold)
+    // print_with_effect(s"Number of Mines: ${state.solution.num_mines}", PrinterEffects.Bold)
+
+    print_board(playerstate.board)
+  })//print_playerstate(playerstate, state.solution.num_mines))
   print_status(state.status)
+}
+
+
+// Prints a board for testing purposes
+// i.e., for mines located at (Coordinate(0, 1), Coordinate(1, 2)), it prints out
+// [ ][ ][]
+// [*][ ][]
+// [ ][*][]
+def print_playerstate(playerstate: PlayerState, num_mines: Int): Unit = {
+  // prints boilder plate
+  print_inplace()
+
+  print_with_effect(s"Board: Player ${playerstate.player.id}", PrinterEffects.Bold)
+  print_with_effect(s"Number of Mines: ${num_mines}", PrinterEffects.Bold)
+
+  print_board(playerstate.board)
+
+  Thread.sleep(1000)
 }
 
 
@@ -255,24 +291,6 @@ def print_board(board: PlayerBoard): Unit = {
 }
 
 
-// Prints a board for testing purposes
-// i.e., for mines located at (Coordinate(0, 1), Coordinate(1, 2)), it prints out
-// [ ][ ][]
-// [*][ ][]
-// [ ][*][]
-def print_board_with_extra(playerstate: PlayerState, num_mines: Int): Unit = {
-  // prints boilder plate
-  print_inplace()
-
-  print_with_effect(s"Board: Player ${playerstate.player.id}", PrinterEffects.Bold)
-  print_with_effect(s"Number of Mines: ${num_mines}", PrinterEffects.Bold)
-
-  print_board(playerstate.board)
-
-  Thread.sleep(1000)
-}
-
-
 def tile_to_string[T](tile: T): String = tile match {
   case t: SolutionTile => t match {
     case SolutionTile.Empty => "0"
@@ -281,9 +299,9 @@ def tile_to_string[T](tile: T): String = tile match {
   }
   case t: PlayerTile => t  match {
     case PlayerTile.Hidden => "[   ]"
-    case PlayerTile.Flagged(flagger) => s"[ ${flagger.color.code}F${PrinterEffects.Reset} ]"
+    case PlayerTile.Flagged(flagger) => s"[ ${flagger.get_color()}F${PrinterEffects.Reset} ]"
     case PlayerTile.Revealed(s_tile) => s"[ ${tile_to_string(s_tile)} ]"
-    case PlayerTile.RevealedNFlagged(s_tile, flagger) => s"[${tile_to_string(s_tile)}|${flagger.color.code}F${PrinterEffects.Reset}]"
+    case PlayerTile.RevealedNFlagged(s_tile, flagger) => s"[${tile_to_string(s_tile)}|${flagger.get_color()}F${PrinterEffects.Reset}]"
   }
   case t: Boolean => t match {
     case true => "[*]" // mine

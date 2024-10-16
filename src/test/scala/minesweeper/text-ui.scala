@@ -7,8 +7,8 @@ class TextUI extends AnyFunSuite {
 
   val test_pos = Coordinate(3, 3)
 
-  val player_0 = PlayerState(Player(0, PlayerColor(PrinterEffects.Red)), new_player_board)
-  val player_1 = PlayerState(Player(1, PlayerColor(PrinterEffects.Blue)), new_player_board)
+  val player_0 = PlayerState(Player(0), new_player_board)
+  val player_1 = PlayerState(Player(1), new_player_board)
   
   // [E][2][x]
   // [E][2][x]
