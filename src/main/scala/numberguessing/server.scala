@@ -1,12 +1,8 @@
 package numberguessing
 
-import java.io._
-import java.nio.ByteBuffer
+import java.io.{BufferedInputStream, BufferedOutputStream}
 import java.net.ServerSocket
-import scala.util.Using
-import scala.util.Random
-import java.util.Arrays
-import upickle.default.*
+import scala.util.{Using, Random}
 import common.network.*
 
 object NumberGuessingServer extends App {

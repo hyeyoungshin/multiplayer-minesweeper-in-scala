@@ -5,8 +5,8 @@ import upickle.default.*
 // {"guess": 12}
 case class PlayerGuess(guess: Int)  derives ReadWriter 
 
-// {$"type": "Wrong", "answer": 3}
-// {$"type": "Correct"}
+// {"$type": "Wrong", "hint": {"$type": "SmallerThan"}}
+// {"$type": "Correct", "answer": 3}
 enum ServerResponse derives ReadWriter:
   case Wrong(hint: Hint)
   case Correct(answer: Int)
