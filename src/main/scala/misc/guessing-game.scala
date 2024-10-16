@@ -48,16 +48,13 @@ def print_start(): Unit =
     println(s"I will choose a number between $MIN_BETWEEN and $MAX_BETWEEN.\n")
     println(s"Guess what it is. You have $MAX_ATTEMPTS attempts allowed.")
 
-// @main def guessing_game(): Unit = 
-    
-//     print_start()
-    
-//     var state = new_game()
-
-//     while !is_gameover(state) do
-//         val user_guess = readLine().toInt
-//         state = play(state, user_guess)
-//         print_state(state)
+@main def guessing_game(): Unit = 
+    print_start()
+    var state = new_game()
+    while !is_gameover(state) do
+        val user_guess = readLine().toInt
+        state = play(state, user_guess)
+        print_state(state)
 
 // model  (game data, separation of game logic from view and controller)
 // view (take instance of model and present it eg. webpage) 
