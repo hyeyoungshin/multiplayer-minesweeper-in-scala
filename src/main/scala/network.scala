@@ -31,7 +31,7 @@ def send_data[T : Writer](out: OutputStream, data: T): Unit = {
 // 2. (actual) data
 // Once it reads data size (which has the fixed size of 4 bytes), it translates it into Int,
 // which is used to read the actual data 
-def read_data[T](in: InputStream)(using reader_for_T: Reader[T]): T = {
+def read_data[T : Reader](in: InputStream): T = {
   // [T: Reader] is a context parameter, meaning
   // the function requires an implicit Reader[T] to be available when the function is called
   // This is commonly used to summon type class instances (like Reader from uPickle).
@@ -39,7 +39,7 @@ def read_data[T](in: InputStream)(using reader_for_T: Reader[T]): T = {
   val data_size = ByteBuffer.wrap(data_size_in_bytes).getInt
   val data = read_by_bytes(in, data_size)
   
-  read[T](new String(data))(using reader_for_T)
+  read(new String(data))
 }
 
 
