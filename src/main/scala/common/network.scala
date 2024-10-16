@@ -1,10 +1,9 @@
-import java.io.OutputStream
+package common.network
+
+import upickle.default.*
 import java.io.InputStream
+import java.io.OutputStream
 import java.nio.ByteBuffer
-import java.net.ServerSocket
-import java.util.Arrays
-import javax.swing.text.html.HTML.Tag
-import upickle.default._
 
 // Notes from the meeting on Oct 9
     // implement def send_data(out, T) any T that has "Writer of T?

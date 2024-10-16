@@ -1,4 +1,7 @@
+package minesweeper.game
+
 import org.scalatest.funsuite.AnyFunSuite
+import minesweeper.print_board
 
 class GameTest extends AnyFunSuite {
   val mine_locations = Array(Array(0, 0, 1), Array(0, 0, 0), Array(0, 0, 1))

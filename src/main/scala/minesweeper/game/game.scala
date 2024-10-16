@@ -1,5 +1,5 @@
-import PrinterEffects.Red
-import PrinterEffects.Blue
+package minesweeper.game
+
 import upickle.default.*
 
 ////////////////////////////

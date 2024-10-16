@@ -1,8 +1,11 @@
+package minesweeper
+
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import upickle.default.*
 import javax.swing.text.html.HTML.Tag
 import java.awt.TrayIcon.MessageType
+import minesweeper.game.*
 
 // The data representation mirroring json input
 //

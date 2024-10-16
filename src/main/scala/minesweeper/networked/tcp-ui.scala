@@ -1,3 +1,5 @@
+package minesweeper.networked
+
 import scala.io.StdIn.readLine
 import java.awt.Color
 import upickle.implicits.Readers

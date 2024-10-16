@@ -1,11 +1,15 @@
-// package numberguessing
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
-import upickle.default._  
-import org.scalatest.funsuite.AnyFunSuite
+package common.network
 
+import org.scalatest.funsuite.AnyFunSuite
+import upickle.default.*
+
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Paths
+
+case class TestGuess(guess: Int) derives ReadWriter 
 
 class Network extends AnyFunSuite {
     def write_and_read[T : ReadWriter](data : T): T = {
@@ -22,12 +26,12 @@ class Network extends AnyFunSuite {
     }
 
     test("data sent is same as data received") {
-        assert(write_and_read(PlayerGuess(10)).guess == 10)
+        assert(write_and_read(TestGuess(10)).guess == 10)
     }
 
     test("from-file") {
         val data_location = "src/test/json/number-guessing/guess.json"
-        val data = read_from_file[PlayerGuess](data_location)
+        val data = read_from_file[TestGuess](data_location)
         assert(data.guess == write_and_read(data).guess)
     }
 }

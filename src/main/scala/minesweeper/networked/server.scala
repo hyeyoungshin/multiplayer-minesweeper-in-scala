@@ -1,3 +1,5 @@
+package minesweeper.network
+
 import java.io._
 import java.nio.ByteBuffer
 import java.net.ServerSocket
@@ -5,6 +7,9 @@ import scala.util.Using
 import scala.util.Random
 import java.util.Arrays
 import upickle.default.*
+import common.network.*
+import minesweeper.game.*
+import minesweeper.print_board
 
 case class GameStart(num_players: Int)
 

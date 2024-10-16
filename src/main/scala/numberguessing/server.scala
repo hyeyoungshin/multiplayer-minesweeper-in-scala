@@ -1,3 +1,5 @@
+package numberguessing
+
 import java.io._
 import java.nio.ByteBuffer
 import java.net.ServerSocket
@@ -5,22 +7,7 @@ import scala.util.Using
 import scala.util.Random
 import java.util.Arrays
 import upickle.default.*
-
-
-// {"guess": 12}
-case class PlayerGuess(guess: Int)  derives ReadWriter 
-
-// {$"type": "Wrong", "answer": 3}
-// {$"type": "Correct"}
-enum ServerResponse derives ReadWriter:
-  case Wrong(hint: Hint)
-  case Correct(answer: Int)
-
-enum Hint derives ReadWriter:
-  case SmallerThan
-  case BiggerThan
-  
-class WrongResponseException extends Exception
+import common.network.*
 
 object NumberGuessingServer extends App {
   Using(new ServerSocket(4444)) { server =>

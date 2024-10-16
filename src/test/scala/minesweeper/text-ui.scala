@@ -1,4 +1,7 @@
+package minesweeper
+
 import org.scalatest.funsuite.AnyFunSuite
+import minesweeper.game.*
 
 class TextUI extends AnyFunSuite {
   var new_state = GameState(Solution(solution_board, 2),

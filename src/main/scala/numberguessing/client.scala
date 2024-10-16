@@ -1,7 +1,10 @@
+package numberguessing
+
 import java.net.Socket
 import java.nio.ByteBuffer
 import scala.util.Random
 import java.io.{BufferedInputStream, BufferedOutputStream}
+import common.network.*
 
 
 object NumberGuessingClient extends App {

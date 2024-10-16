@@ -1,10 +1,13 @@
+package minesweeper
+
 import org.scalatest.funsuite.AnyFunSuite
 import os.move
+import minesweeper.game.*
 
 class Parse extends AnyFunSuite {
 
   test("parse_gameaction") {
-        val filename = "src/test/board_tests/gameaction.json"
+        val filename = "src/test/json/tcp/gameaction.json"
         val parsed_message = parse_game_message(filename)
 
         parsed_message match {
@@ -14,7 +17,7 @@ class Parse extends AnyFunSuite {
   }
 
   test("parse_gameboard") {
-        val filename = "src/test/board_tests/gameboard.json"
+        val filename = "src/test/json/tcp/gameboard.json"
         val parsed_message = parse_game_message(filename)
 
         parsed_message match {
@@ -24,7 +27,7 @@ class Parse extends AnyFunSuite {
   }
 
   test("parse_tile_matrix_2x2") {
-        val filename = "src/test/board_tests/gameboard.json"
+        val filename = "src/test/json/tcp/gameboard.json"
         val parsed_message = parse_game_message(filename)
 
         val parsed_board = parsed_message match {
@@ -40,7 +43,7 @@ class Parse extends AnyFunSuite {
   }
 
   test("parse_tile_matrix_3x3") {
-        val filename = "src/test/board_tests/gameboard2.json"
+        val filename = "src/test/json/tcp/gameboard2.json"
         val parsed_message = parse_game_message(filename)
 
         val parsed_board = parsed_message match {

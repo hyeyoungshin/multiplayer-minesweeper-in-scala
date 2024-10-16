@@ -1,3 +1,5 @@
+package minesweeper.game
+
 import org.scalatest.funsuite.AnyFunSuite
 
 class BoardTest extends AnyFunSuite {

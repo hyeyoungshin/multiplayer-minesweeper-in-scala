@@ -1,6 +1,9 @@
+package minesweeper
+
 import scala.io.StdIn.readLine
 import java.awt.Color
 import upickle.implicits.Readers
+import minesweeper.game.*
 
 ///////////////////////////////////////////////////////////////
 //////////// Text based Single Player Minesweeper /////////////

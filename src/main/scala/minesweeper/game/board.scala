@@ -1,3 +1,5 @@
+package minesweeper.game
+
 import scala.util.Random
 
 /////////////////////////////
