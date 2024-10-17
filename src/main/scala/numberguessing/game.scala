@@ -1,27 +1,19 @@
-package guessing_game
+package numberguessing
 
 import scala.util.Random
 import scala.io.StdIn.readLine
 
-val MAX_ATTEMPTS = 5
-val MIN_BETWEEN = 0 
-val MAX_BETWEEN = 99
-
-enum GameState:
-  case Win
-  case Continue(val attempts_remaining: Int, val answer: Int)//, val flag: Boolean)
-  case Lose
 
 def new_game(): GameState = 
   GameState.Continue(MAX_ATTEMPTS, Random.between(MIN_BETWEEN, MAX_BETWEEN))
 
 def play(g: GameState, guess: Int): GameState = 
     g match {
-        case GameState.Continue(a, n) => {
-            if n == guess then 
+        case GameState.Continue(attempts_remaining, answer) => {
+            if answer == guess then 
                 GameState.Win 
-            else if a > 1 then 
-                GameState.Continue(a - 1, n)
+            else if attempts_remaining > 1 then 
+                GameState.Continue(attempts_remaining - 1, answer)
             else
                 GameState.Lose
         }
@@ -39,7 +31,7 @@ def print_state(g: GameState): Unit =
   g match {
     case GameState.Win => println("You win!")
     case GameState.Lose => println("You lose!")
-    case GameState.Continue(a, _) => println(s"You have $a attempts left. Guess again.")
+    case GameState.Continue(attempts_remaining, _) => println(s"You have $attempts_remaining attempts left. Guess again.")
   }
 
 def print_start(): Unit = 
@@ -56,6 +48,6 @@ def print_start(): Unit =
         state = play(state, user_guess)
         print_state(state)
 
-// model  (game data, separation of game logic from view and controller)
-// view (take instance of model and present it eg. webpage) 
-// controller (takes user input and trigger model and update the view)
+// model:  game data, separation of game logic from view and controller
+// view: take instance of model and present it eg. webpage) 
+// controller: takes user input and triggers model and updates the view

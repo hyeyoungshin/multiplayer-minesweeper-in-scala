@@ -31,14 +31,15 @@ object NumberGuessingClient extends App {
     server_response match {
       case ServerResponse.Wrong(Hint.SmallerThan) => num_tries -= 1; max = my_guess.guess; println(s"Guess a smaller number.")
       case ServerResponse.Wrong(Hint.BiggerThan) => num_tries -= 1; min = my_guess.guess; println(s"Guess a bigger number.")
-      case ServerResponse.Correct(_) => num_tries = 0;
+      case ServerResponse.Correct => num_tries = 0;
+      case ServerResponse.Lose(answer) => println(s"You lost. The correct guess was $answer...")
     }
   }
 
   val answer = read_data[ServerResponse](in)
   
   answer match {
-    case ServerResponse.Correct(answer) => println(s"The correct answer was $answer.")
+    case ServerResponse.Correct => println(s"The correct answer was $answer.")
     case _ => throw new WrongResponseException
 
   }

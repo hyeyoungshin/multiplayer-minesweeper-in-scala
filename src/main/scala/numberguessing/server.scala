@@ -33,7 +33,7 @@ object NumberGuessingServer extends App {
             num_tries -= 1
           }
         }
-        send_data(out, ServerResponse.Correct(game_number))
+        send_data(out, ServerResponse.Correct)
       }
     }
   } match {
