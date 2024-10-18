@@ -14,29 +14,32 @@ object NumberGuessingServer extends App {
     // Use BufferedReader for input and PrintWriter for output
     Using(new BufferedInputStream(client.getInputStream)) { in =>
       Using(new BufferedOutputStream(client.getOutputStream)) { out =>
-        val game_number = Random.between(1, 100)
-        println(s"Game number: $game_number")
-        
-        var num_tries = 3
+        var game = new_game()
 
-        while(num_tries > 0) {
+        while !is_gameover(game) do {
+          //TODO: Error handling
           val player_guess = read_data[PlayerGuess](in)
-          println(s"Player guessed: ${player_guess.guess}")
+          println(s"Player guessed: ${player_guess.number}")
 
-          if player_guess.guess == game_number then {
-            num_tries = 0
-          } else if player_guess.guess < game_number then {
-            send_data(out, ServerResponse.Wrong(Hint.BiggerThan))
-            num_tries -= 1
-          } else {
-            send_data(out, ServerResponse.Wrong(Hint.SmallerThan))
-            num_tries -= 1
-          }
+          game.state = play(game, player_guess)
+          var server_response = game_to_response(game)
+          
+          send_data[ServerResponse](out, server_response)
         }
-        send_data(out, ServerResponse.Correct)
-      }
-    }
-  } match {
+
+        //   if player_guess.number == game_number then {
+        //     num_tries = 0
+        //   } else if player_guess.number < game_number then {
+        //     send_data(out, ServerResponse.Wrong(Hint.BiggerThan))
+        //     num_tries -= 1
+        //   } else {
+        //     send_data(out, ServerResponse.Wrong(Hint.SmallerThan))
+        //     num_tries -= 1
+        //   }
+      } // Using Out
+    } // Using In
+  } // Using Socket
+  match {
     // If the block runs without any exceptions, Success is returned
     case scala.util.Success(_) => println("Server stopped successfully.")
     case scala.util.Failure(e) => println(s"An error occurred: ${e.getMessage}")

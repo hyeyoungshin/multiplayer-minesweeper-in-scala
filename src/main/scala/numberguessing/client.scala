@@ -24,15 +24,15 @@ object NumberGuessingClient extends App {
     val my_guess = PlayerGuess(Random.between(min, max))
     
     send_data(out, my_guess)
-    println(s"Sent my guess: ${my_guess.guess}")
+    println(s"Sent my guess: ${my_guess.number}")
 
     val server_response = read_data[ServerResponse](in)
 
     server_response match {
-      case ServerResponse.Wrong(Hint.SmallerThan) => num_tries -= 1; max = my_guess.guess; println(s"Guess a smaller number.")
-      case ServerResponse.Wrong(Hint.BiggerThan) => num_tries -= 1; min = my_guess.guess; println(s"Guess a bigger number.")
+      case ServerResponse.Wrong(Hint.Smaller) => num_tries -= 1; max = my_guess.number; println(s"Guess a smaller number.")
+      case ServerResponse.Wrong(Hint.Bigger) => num_tries -= 1; min = my_guess.number; println(s"Guess a bigger number.")
       case ServerResponse.Correct => num_tries = 0;
-      case ServerResponse.Lose(answer) => println(s"You lost. The correct guess was $answer...")
+      case ServerResponse.Result(answer) => println(s"You lost. The correct guess was $answer...")
     }
   }
 

@@ -6,25 +6,28 @@ val MAX_ATTEMPTS = 5
 val MIN_BETWEEN = 0 
 val MAX_BETWEEN = 99
 
+
+case class Game(number: Int, var state: GameState)
+
 enum GameState:
   case Win
-  case Continue(val attempts_remaining: Int, val answer: Int)
   case Lose
+  case Continue(attempts_remaining: Int, hint: Hint)
 
-// TODO: ef gamestate -> server_response
+enum Hint derives ReadWriter:
+  case None
+  case Smaller
+  case Bigger
 
-// {"guess": 12}
-case class PlayerGuess(guess: Int)  derives ReadWriter 
+/* {"guess": 12} */
+case class PlayerGuess(number: Int)  derives ReadWriter 
 
 // {"$type": "Wrong", "hint": {"$type": "SmallerThan"}}
 // {"$type": "Correct", "answer": 3}
 enum ServerResponse derives ReadWriter:
   case Wrong(hint: Hint)
-  case Lose(answer: Int)
   case Correct
+  case Result(number: Int)
   
-enum Hint derives ReadWriter:
-  case SmallerThan
-  case BiggerThan
   
 class WrongResponseException extends Exception
