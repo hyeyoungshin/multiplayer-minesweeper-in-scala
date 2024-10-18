@@ -5,8 +5,9 @@ import scala.io.StdIn.readLine
 import minesweeper.get_valid_input
 
 
-def new_game(): Game = 
-  Game(Random.between(MIN_BETWEEN, MAX_BETWEEN), GameState.Continue(MAX_ATTEMPTS, Hint.None))
+def new_game(max_attempts: Int): Game = 
+  Game(Random.between(MIN_BETWEEN, MAX_BETWEEN), max_attempts, GameState.Continue(max_attempts, Hint.None))
+
 
 def parse_guess(user_input: String): Either[String, PlayerGuess] = {
   try { 
@@ -32,12 +33,12 @@ def play(game: Game, guess: PlayerGuess): GameState =
         case GameState.Continue(attempts_remaining, _) => {
             if guess.number == game.number then
                 GameState.Win
+            else if attempts_remaining == 1 && guess.number != game.number then
+                GameState.Lose
             else if attempts_remaining > 1 && guess.number < game.number then 
                 GameState.Continue(attempts_remaining - 1, Hint.Bigger)
-            else if attempts_remaining > 1 && guess.number > game.number then
-                GameState.Continue(attempts_remaining - 1, Hint.Smaller)
             else
-                GameState.Lose
+                GameState.Continue(attempts_remaining - 1, Hint.Smaller)
         }
         case _ => throw new IllegalStateException()
     }
@@ -73,15 +74,24 @@ def game_to_response(g: Game): ServerResponse = {
     }
 }
 
+def print_response(response: ServerResponse): Unit = {
+  response match {
+    case ServerResponse.Wrong(Hint.Smaller) => println(s"Guess a smaller number.")
+    case ServerResponse.Wrong(Hint.Bigger) => println(s"Guess a bigger number.")
+    case ServerResponse.Correct => println("You guessed correctly!")
+    case ServerResponse.Result(answer) => println(s"You lost. The answer was $answer")
+    case _ => throw new WrongResponseException
+    }
+}
+
 def print_start(): Unit = 
     println("\n")
     println("Welcome to Number Guessing Game.\n")
     println(s"Guess a number between $MIN_BETWEEN and $MAX_BETWEEN.\n")
-    println(s"You have $MAX_ATTEMPTS attempt(s) left.")
 
 @main def guessing_game(): Unit = 
   print_start()
-  var game = new_game()
+  var game = new_game(5)
   while !is_gameover(game) do
     val user_guess = get_valid_input("Enter a number:", parse_guess)
     game.state = play(game, user_guess)

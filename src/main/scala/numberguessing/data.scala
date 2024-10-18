@@ -2,12 +2,10 @@ package numberguessing
 
 import upickle.default.*
 
-val MAX_ATTEMPTS = 5
 val MIN_BETWEEN = 0 
 val MAX_BETWEEN = 99
 
-
-case class Game(number: Int, var state: GameState)
+case class Game(number: Int, num_attempts: Int, var state: GameState)
 
 enum GameState:
   case Win

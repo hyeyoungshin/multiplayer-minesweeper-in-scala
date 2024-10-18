@@ -10,10 +10,13 @@ object NumberGuessingServer extends App {
     println("Server started, waiting for clients to connect...")
     val client = server.accept()
     println("Client connected")
-
+    
     Using(new BufferedInputStream(client.getInputStream)) { in =>
       Using(new BufferedOutputStream(client.getOutputStream)) { out =>
-        var game = new_game()
+        var game = new_game(5)
+        
+        // send number of attempts
+        send_data[Int](out, 5)
 
         while !is_gameover(game) do {
           //TODO: Error handling
@@ -24,7 +27,8 @@ object NumberGuessingServer extends App {
           var server_response = game_to_response(game)
           
           send_data[ServerResponse](out, server_response)
-        }
+          println(s"sent: $server_response")
+        } // while
       } // Using Out
     } // Using In
   } // Using Socket

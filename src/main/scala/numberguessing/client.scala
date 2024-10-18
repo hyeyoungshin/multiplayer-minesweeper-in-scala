@@ -4,7 +4,7 @@ import java.net.Socket
 import scala.util.Random
 import java.io.{BufferedInputStream, BufferedOutputStream}
 import common.network.*
-
+import scala.io.StdIn.readLine
 
 object NumberGuessingClient extends App {
   val socket = new Socket("localhost", 4444)
@@ -15,33 +15,24 @@ object NumberGuessingClient extends App {
   
   // user interface can be handled in client, but not good idea to mix with protocol 
   // with json data/scala type, messages that the client print vs.in data to compute with will be clearer
-  var num_tries = 3
-  var max = 100
-  var min = 0
+  var num_attempts = read_data[Int](in)
   
-  while(num_tries > 0) {
-    // Compute a guess
-    val my_guess = PlayerGuess(Random.between(min, max))
+  while(num_attempts > 0) {
+    println(s"number of attempts left: $num_attempts")
+
+    val player_input = readLine()
+    val player_guess = PlayerGuess(player_input.toInt)
     
-    send_data(out, my_guess)
-    println(s"Sent my guess: ${my_guess.number}")
-
+    send_data(out, player_guess)
+    println(s"Sent my guess: ${player_guess.number}")
+    
     val server_response = read_data[ServerResponse](in)
-
-    server_response match {
-      case ServerResponse.Wrong(Hint.Smaller) => num_tries -= 1; max = my_guess.number; println(s"Guess a smaller number.")
-      case ServerResponse.Wrong(Hint.Bigger) => num_tries -= 1; min = my_guess.number; println(s"Guess a bigger number.")
-      case ServerResponse.Correct => num_tries = 0;
-      case ServerResponse.Result(answer) => println(s"You lost. The correct guess was $answer...")
+    print_response(server_response)
+    
+    num_attempts = server_response match {
+      case ServerResponse.Correct => 0
+      case _ => num_attempts - 1
     }
-  }
-
-  val answer = read_data[ServerResponse](in)
-  
-  answer match {
-    case ServerResponse.Correct => println(s"The correct answer was $answer.")
-    case _ => throw new WrongResponseException
-
   }
 
   socket.close()
