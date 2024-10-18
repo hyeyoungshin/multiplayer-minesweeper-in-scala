@@ -11,7 +11,6 @@ object NumberGuessingServer extends App {
     val client = server.accept()
     println("Client connected")
 
-    // Use BufferedReader for input and PrintWriter for output
     Using(new BufferedInputStream(client.getInputStream)) { in =>
       Using(new BufferedOutputStream(client.getOutputStream)) { out =>
         var game = new_game()
