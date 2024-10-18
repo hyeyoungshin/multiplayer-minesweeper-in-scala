@@ -26,16 +26,6 @@ object NumberGuessingServer extends App {
           
           send_data[ServerResponse](out, server_response)
         }
-
-        //   if player_guess.number == game_number then {
-        //     num_tries = 0
-        //   } else if player_guess.number < game_number then {
-        //     send_data(out, ServerResponse.Wrong(Hint.BiggerThan))
-        //     num_tries -= 1
-        //   } else {
-        //     send_data(out, ServerResponse.Wrong(Hint.SmallerThan))
-        //     num_tries -= 1
-        //   }
       } // Using Out
     } // Using In
   } // Using Socket
