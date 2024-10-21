@@ -37,7 +37,7 @@ def read_data[T : Reader](in: InputStream): T = {
   val data_size_in_bytes = read_by_bytes(in, 4)
   val data_size = ByteBuffer.wrap(data_size_in_bytes).getInt
   val data = read_by_bytes(in, data_size)
-  
+
   read(data)
 }
 

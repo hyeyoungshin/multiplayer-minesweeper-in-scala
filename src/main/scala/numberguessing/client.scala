@@ -5,6 +5,7 @@ import scala.util.Random
 import java.io.{BufferedInputStream, BufferedOutputStream}
 import common.network.*
 import scala.io.StdIn.readLine
+import minesweeper.get_valid_input
 
 object NumberGuessingClient extends App {
   val socket = new Socket("localhost", 4444)
@@ -15,23 +16,22 @@ object NumberGuessingClient extends App {
   
   // user interface can be handled in client, but not good idea to mix with protocol 
   // with json data/scala type, messages that the client print vs.in data to compute with will be clearer
-  var num_attempts = read_data[Int](in)
+  var remaining_attempts = read_data[Int](in)
+  print_start(remaining_attempts)
   
-  while(num_attempts > 0) {
-    println(s"number of attempts left: $num_attempts")
-
-    val player_input = readLine()
-    val player_guess = PlayerGuess(player_input.toInt)
-    
+  while(remaining_attempts > 0) {
+    println(s"number of attempts left: $remaining_attempts")
+    // Parsing and validating user input handled here. Is that ok?
+    val player_guess = get_valid_input("Enter a number:", parse_and_validate_guess)
     send_data(out, player_guess)
     println(s"Sent my guess: ${player_guess.number}")
     
     val server_response = read_data[ServerResponse](in)
     print_response(server_response)
     
-    num_attempts = server_response match {
+    remaining_attempts = server_response match {
       case ServerResponse.Correct => 0
-      case _ => num_attempts - 1
+      case _ => remaining_attempts - 1
     }
   }
 

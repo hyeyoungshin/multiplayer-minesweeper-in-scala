@@ -4,13 +4,14 @@ import upickle.default.*
 
 val MIN_BETWEEN = 0 
 val MAX_BETWEEN = 99
+val MAX_ATTEMPTS = 5
 
-case class Game(number: Int, num_attempts: Int, var state: GameState)
+case class Game(number: Int, max_attempts: Int, var state: GameState)
 
 enum GameState:
   case Win
   case Lose
-  case Continue(attempts_remaining: Int, hint: Hint)
+  case Continue(remaining_attempts: Int, hint: Hint)
 
 enum Hint derives ReadWriter:
   case None

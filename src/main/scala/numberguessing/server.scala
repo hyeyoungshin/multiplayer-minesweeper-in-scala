@@ -13,13 +13,12 @@ object NumberGuessingServer extends App {
     
     Using(new BufferedInputStream(client.getInputStream)) { in =>
       Using(new BufferedOutputStream(client.getOutputStream)) { out =>
-        var game = new_game(5)
+        var game = new_game(MAX_ATTEMPTS)
         
         // send number of attempts
-        send_data[Int](out, 5)
+        send_data[Int](out, game.max_attempts)
 
         while !is_gameover(game) do {
-          //TODO: Error handling
           val player_guess = read_data[PlayerGuess](in)
           println(s"Player guessed: ${player_guess.number}")
 

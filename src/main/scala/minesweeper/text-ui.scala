@@ -68,7 +68,7 @@ def get_valid_input[T](message: String, parse_and_validate: String => Either[Str
   loop()
 }
 
-// 
+
 def get_valid_inputs(state: GameState): PlayerAction = {
   def loop(): PlayerAction = 
     val coordinate = get_valid_coordinate(state)
@@ -80,7 +80,6 @@ def get_valid_inputs(state: GameState): PlayerAction = {
 
   loop()
 }
-  // get_valid_action(state)(get_valid_coordinate(state))
 
 
 /////////////////////
