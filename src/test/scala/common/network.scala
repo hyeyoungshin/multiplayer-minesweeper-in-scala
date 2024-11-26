@@ -38,9 +38,36 @@ class Network extends AnyFunSuite {
         assert(read_data[TestGuess](in).guess == 9)
     }
 
-    test("from-file") {
+    test("from-file timeout long enough") {
         val data_location = "src/test/json/number-guessing/guess.json"
         val data = read_from_file[TestGuess](data_location)
         assert(data.guess == write_and_read(data).guess)
+    }
+
+    test("run_with_timeout_test should fail") {
+        val out = new ByteArrayOutputStream()
+        send_data(out, TestGuess(10))
+        val in = new ByteArrayInputStream(out.toByteArray)
+        
+        val data_size_in_bytes = read_by_bytes(in, 4)
+        val data_size = java.nio.ByteBuffer.wrap(data_size_in_bytes).getInt
+        val result = run_with_timeout[Array[Byte]](read_by_bytes_sleep, 2000)(in, data_size)
+
+        assert(result == None)
+    }
+
+    test("run_with_timeout should succeed") {
+        val out = new ByteArrayOutputStream()
+        send_data(out, TestGuess(10))
+        val in = new ByteArrayInputStream(out.toByteArray)
+        
+        val data_size_in_bytes = read_by_bytes(in, 4)
+        val data_size = java.nio.ByteBuffer.wrap(data_size_in_bytes).getInt
+        val result = run_with_timeout[Array[Byte]](read_by_bytes_sleep, 6000)(in, data_size)
+        
+        result match {
+            case Some(data) => assert(read[TestGuess](data) == TestGuess(10))
+            case None => fail("Timeout reached")
+        }
     }
 }

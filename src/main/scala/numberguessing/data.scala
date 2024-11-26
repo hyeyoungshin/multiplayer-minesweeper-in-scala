@@ -27,6 +27,7 @@ enum ServerResponse derives ReadWriter:
   case Wrong(hint: Hint)
   case Correct
   case Result(number: Int)
+  case TimeOut 
   
   
 class WrongResponseException extends Exception
