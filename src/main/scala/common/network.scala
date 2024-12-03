@@ -37,7 +37,7 @@ def read_data[T : Reader](in: InputStream): T = {
   val data_size_in_bytes = read_by_bytes(in, 4)
   val data_size = ByteBuffer.wrap(data_size_in_bytes).getInt
   val data = read_by_bytes(in, data_size)
-  
+
   read(data)
 }
 
@@ -46,7 +46,6 @@ def read_data[T : Reader](in: InputStream): T = {
 // and returns the size in the byte array format
 def get_json_data_size(json_data: String): Array[Byte] = {
   val byte_size = json_data.getBytes("UTF-8").length
-  // println(s"sending ${byte_size} data...")
   ByteBuffer.allocate(4).putInt(byte_size).array()
 }
 
@@ -64,12 +63,12 @@ def read_by_bytes(in: InputStream, num_bytes: Int): Array[Byte] = {
   buffer
 }
 
-def read_by_bytes_sleep(in: InputStream, num_bytes: Int): Array[Byte] = {
+def read_by_bytes_test(in: InputStream, num_bytes: Int): Array[Byte] = {
   val buffer = new Array[Byte](num_bytes)
   var bytesRead = 0 // how many bytes we've read so far
   while (bytesRead < num_bytes) {
-    println(s"sleeping for 5 second(s) during the task...")
-    Thread.sleep(5000)
+    println(s"sleeping for 3 second(s) during the task...")
+    Thread.sleep(3000)
     // `num_bytes - bytesRead`: how many more bytes left to read
     val result = in.read(buffer, bytesRead, num_bytes - bytesRead)
     if (result == -1) throw new RuntimeException("End of stream reached unexpectedly")
@@ -79,18 +78,25 @@ def read_by_bytes_sleep(in: InputStream, num_bytes: Int): Array[Byte] = {
   buffer
 }
 
-// Runs `task` for `timeout` milliseconds and returns the result of the task 
-// If it finishes within the time limit, it returns the result of the task wrapped in Option type
-// Otherwise, it returns None
-def run_with_timeout[A](task: => A, timeout: Int): Option[A] =
-  val runnable = MyWorker[A](task)
-  val worker = Thread(runnable)
-  worker.start()
-  // println("running the task...")
-  Thread.sleep(timeout)
-  // println(s"Timeout ${timeout/1000} seconds reached. Interrupting the worker...")
-  worker.interrupt()
-  runnable.result
+// Uses two runnables to run a task with a time limit
+// 1. worker thread runs the task passed to the thunk
+// 2. until interrupter thread interrupts the worker after the time limit
+// 3. join method blocks the main thread until the worker thread completes the task
+// If it finishes within the time limit, it returns Some(result of the task)
+// Otherwise, None
+def run_with_timeout[A](task: => A, timeout: Int): Option[A] = {
+  val runnable_worker = MyWorker[A](task)
+  val worker = Thread(runnable_worker)
+
+  val runnable_interrupter = MyInterrupter(timeout, worker) 
+  val interrupter = Thread(runnable_interrupter)
+
+  worker.start()      // 1. starts the task passed to thunk 
+  interrupter.start() // 2. waits for timeout miliseconds before interrupting the workder
+  worker.join()       // 3. waits for the worker to finish
+  
+  runnable_worker.result
+}
 
 
 // WorkerReader is a class that takes a thunk `f` and stores the result of the task in `result`
@@ -102,4 +108,13 @@ class MyWorker[A](f: => A) extends Runnable {
     } catch {
       case e: InterruptedException => None
     }
+}
+
+// WorkerReader is a class that takes a thunk `f` and stores the result of the task in `result`
+class MyInterrupter(time: Int, worker: Thread) extends Runnable {
+  def run(): Unit =
+    println("interrupter sleeping...")
+    Thread.sleep(time)
+    println("interrupter interrupting...")
+    worker.interrupt() // if worker doesn't exists (worker completed its task), it has no effect
 }
