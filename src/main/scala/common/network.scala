@@ -37,7 +37,7 @@ def read_data[T : Reader](in: InputStream): T = {
   val data_size_in_bytes = read_by_bytes(in, 4)
   val data_size = ByteBuffer.wrap(data_size_in_bytes).getInt
   val data = read_by_bytes(in, data_size)
-
+  
   read(data)
 }
 
@@ -82,27 +82,23 @@ def read_by_bytes_sleep(in: InputStream, num_bytes: Int): Array[Byte] = {
 // Runs `task` for `timeout` milliseconds and returns the result of the task 
 // If it finishes within the time limit, it returns the result of the task wrapped in Option type
 // Otherwise, it returns None
-def run_with_timeout[A](task: (InputStream, Int) => A, timeout: Int)(in: InputStream, num_bytes: Int): Option[A] =
-  val runnable = WorkerReader[A](task, in, num_bytes)
+def run_with_timeout[A](task: => A, timeout: Int): Option[A] =
+  val runnable = MyWorker[A](task)
   val worker = Thread(runnable)
   worker.start()
-  println("running the task...")
+  // println("running the task...")
   Thread.sleep(timeout)
-  println(s"Timeout ${timeout/1000} seconds reached. Interrupting the worker...")
+  // println(s"Timeout ${timeout/1000} seconds reached. Interrupting the worker...")
   worker.interrupt()
   runnable.result
 
 
-// Designed to be used with `run_with_timeout`
-// `run_with_timeout` is a higher-order function that takes a function `task` and Int `timeout`.
-// It runs the task for timeout milliseconds and returns the result of the task if it finishes within the time limit.
-// Otherwise, it returns None.
-// WorkerReader's `result` stores the result of the task.
-class WorkerReader[A](f: (InputStream, Int) => A, in: InputStream, num_bytes: Int) extends Runnable {
+// WorkerReader is a class that takes a thunk `f` and stores the result of the task in `result`
+class MyWorker[A](f: => A) extends Runnable {
   var result: Option[A] = None
   def run(): Unit =
     try {
-      result = Some(f(in, num_bytes))
+      result = Some(f)
     } catch {
       case e: InterruptedException => None
     }
