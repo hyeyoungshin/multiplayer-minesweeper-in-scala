@@ -51,7 +51,7 @@ class Network extends AnyFunSuite {
         
         val data_size_in_bytes = read_by_bytes(in, 4)
         val data_size = java.nio.ByteBuffer.wrap(data_size_in_bytes).getInt
-        val result = run_with_timeout[Array[Byte]](read_by_bytes_sleep, 2000)(in, data_size)
+        val result = run_with_timeout[Array[Byte]](read_by_bytes_sleep(in, data_size), 2000)
 
         assert(result == None)
     }
@@ -63,11 +63,19 @@ class Network extends AnyFunSuite {
         
         val data_size_in_bytes = read_by_bytes(in, 4)
         val data_size = java.nio.ByteBuffer.wrap(data_size_in_bytes).getInt
-        val result = run_with_timeout[Array[Byte]](read_by_bytes_sleep, 6000)(in, data_size)
+        val result = run_with_timeout(read_by_bytes_sleep(in, data_size), 6000)
         
         result match {
             case Some(data) => assert(read[TestGuess](data) == TestGuess(10))
             case None => fail("Timeout reached")
         }
+    }
+
+    test("what does read_data do now?") {
+        val out = new ByteArrayOutputStream()
+        send_data(out, "How many players?")
+        val in = new ByteArrayInputStream(out.toByteArray)
+        val data = read_data[String](in)
+        assert(data == "How many players?")
     }
 }
