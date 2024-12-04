@@ -10,6 +10,7 @@ object NumberGuessingServer extends App {
   Using(new ServerSocket(4444)) { server =>
     println("Server started, waiting for clients to connect...")
     val client = server.accept()
+    client.setSoTimeout(10)
     println("Client connected")
 
   // val in = new BufferedInputStream(client.getInputStream)
@@ -23,7 +24,7 @@ object NumberGuessingServer extends App {
         send_data[Int](out, game.max_attempts)
 
         while !is_gameover(game) do {
-          val player_guess = run_with_timeout(read_data[PlayerGuess](in), 5000)
+          val player_guess = read_data_timeout[PlayerGuess](in, 5000)
           player_guess match {
             case Some(guess) => { 
               println(s"Player guessed: ${guess.number}")
