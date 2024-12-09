@@ -15,7 +15,14 @@ import java.util.concurrent.TimeoutException
     // property testing! 
     // instead of low-level testing, test properties that I care about
 
-// Writes data to out and send 
+
+// The `send_data` function sends data of type `T` over the network
+// The data is serialized into JSON format before sending
+// The data is sent in two parts:
+// 1. the size of the data is sent in 4 bytes
+// 2. the actual data is sent
+// The size of the data is used to read the actual data from the InputStream
+// See `read_data_internal` for more details
 def send_data[T : Writer](out: OutputStream, data: T): Unit = {
   val json_data = write(data)
   val data_size = get_json_data_size(json_data)
@@ -26,13 +33,21 @@ def send_data[T : Writer](out: OutputStream, data: T): Unit = {
   out.flush()
 }
 
-def read_data_timeout[T : Reader](in: InputStream, timeout : Int): Option[T] = {
-  run_with_timeout(check_timeout => read_data_internal(in, check_timeout), timeout)
+
+// The `get_json_data_size` function computes the data size of `json_data` 
+// in the byte array format and returns the size in the byte array format
+// The size is computed in 4 bytes
+def get_json_data_size(json_data: String): Array[Byte] = {
+  val byte_size = json_data.getBytes("UTF-8").length
+  ByteBuffer.allocate(4).putInt(byte_size).array()
 }
+
+
 
 def read_data[T : Reader](in: InputStream): T = {
   read_data_internal(in, () => {})
 }
+
 
 // Takes an input stream and reads two types of data from the input stream
 // 1. data size
@@ -51,14 +66,21 @@ def read_data_internal[T : Reader](in: InputStream, check_timeout: () => Unit): 
 }
 
 
-// Computes the data size of json_data in the byte array format 
-// and returns the size in the byte array format
-def get_json_data_size(json_data: String): Array[Byte] = {
-  val byte_size = json_data.getBytes("UTF-8").length
-  ByteBuffer.allocate(4).putInt(byte_size).array()
+def read_data_timeout[T : Reader](in: InputStream, timeout : Int): Option[T] = {
+  run_with_timeout(check_timeout => read_data_internal(in, check_timeout), timeout)
 }
 
-// Helper that reads exactly `num_bytes` bytes from InputStream `in`
+
+// The `read_by_bytes` function reads exactly `num_bytes` bytes from the InputStream `in`
+// and sometimes does so within a period of time specified by the `check_timeout` function
+// The function reads the bytes in a loop until it reads `num_bytes` bytes
+//  - The function reads `num_bytes - bytesRead` bytes in each iteration
+//  - The function returns an array of bytes of size `num_bytes`
+//    containing the bytes read from the InputStream
+// There are tow mechanisms to ensure data reading takes within the allotted time:
+// - `setSoTimeout` is called on client's socket to set the timeout for waiting to receive data
+//    so that trickling partial data doesn't cause delay too much
+// - `check_timeout` is called to make sure reading the complete data doesn't take longer than allotted time
 def read_by_bytes(in: InputStream, num_bytes: Int, check_timeout: () => Unit): Array[Byte] = {
   val buffer = new Array[Byte](num_bytes)
   var bytesRead = 0 // how many bytes we've read so far
@@ -79,6 +101,9 @@ def read_by_bytes(in: InputStream, num_bytes: Int, check_timeout: () => Unit): A
   buffer
 }
 
+// The `run_with_timeout` function  takes a function `task` and a `timeout` value in miliseconds
+// If the task completes within the timeout, the result is returned as `Some(result)`
+// Otherwise, None
 def run_with_timeout[A](task: (() => Unit) => A, timeout: Int): Option[A] = {
     val begin = System.currentTimeMillis();
         
