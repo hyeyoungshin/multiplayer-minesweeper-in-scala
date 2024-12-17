@@ -242,8 +242,29 @@ def stream_group[A](s: Stream[A], size: Int): Stream[List[A]] = {
 stream_to_string(stream_group(ten_positive_numbers, 3))
 
 
-// returns a stream containing indicies of all the elements, e, in s where p(e) = true
-def stream_index_where[A](s: Stream[A], p: A => Boolean): Stream[Int] = ???
+// Takes a stream and returns a stream containing indicies of all the elements, e, where p(e) satisfies
+// Note: may not terminate for infinite streams
+// Example: 
+//   stream_index_where(ten_positive_numbers, x => x % 2 == 0) // 1, 3, 5, 7, 9
+//   stream_to_string(indicies_of_five) // 4
+def stream_index_where[A](stream: Stream[A], p: A => Boolean): Stream[Int] = {
+  def go(s: Stream[A], index: Int): Stream[Int] = {
+    s match {
+      case Stream.StreamEmpty() => Stream.StreamEmpty()
+      case Stream.StreamCons(first, rest) => p(first) match {
+        case true => Stream.StreamCons(index, () => go(rest(), index + 1))
+        case false => go(rest(), index + 1)
+
+      }
+    }
+  }
+  go(stream, 0)
+}
+
+val indicies_of_even = stream_index_where(ten_positive_numbers, x => x % 2 == 0)
+stream_to_string(indicies_of_even)
+val indicies_of_five = stream_index_where(ten_positive_numbers, x => x == 5)
+stream_to_string(indicies_of_five)
 
 // find the two smallest primes bigger than 100?
 // Checkout LazyList
