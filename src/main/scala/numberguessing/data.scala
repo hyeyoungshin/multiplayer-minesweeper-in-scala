@@ -5,6 +5,7 @@ import upickle.default.*
 val MIN_BETWEEN = 0 
 val MAX_BETWEEN = 99
 val MAX_ATTEMPTS = 5
+val MAX_PLAYER = 2
 
 case class Game(number: Int, max_attempts: Int, var state: GameState)
 
@@ -27,7 +28,8 @@ enum ServerResponse derives ReadWriter:
   case Wrong(hint: Hint)
   case Correct
   case Result(number: Int)
-  case TimeOut 
-  
+  case TimeOut
+
+case class ServerMessage(msg: String) derives ReadWriter
   
 class WrongResponseException extends Exception
